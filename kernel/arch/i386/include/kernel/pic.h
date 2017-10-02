@@ -72,27 +72,12 @@ static inline void pic_init(int pic1, int pic2) {
 
 static inline void pic_eoi(uint8_t irq) {
 	if(irq >= 8) {
-		outb(PIC2_COMMAND, PIC_EOI);
+		outb_p(PIC2_COMMAND, PIC_EOI);
 	}
-	outb(PIC1_COMMAND, PIC_EOI);
+	outb_p(PIC1_COMMAND, PIC_EOI);
 }
 
-static inline void pic_set_mask(uint32_t mask) {
-	uint8_t  a1, a2;
-
-	a1 = mask & 0xFF;
-	a2 = (mask & 0xFF00) >> 8;
-
-	outb(PIC1_DATA, a1);
-	outb(PIC2_DATA, a2);
-}
-
-static inline uint32_t pic_get_mask() {
-	uint8_t  a1, a2;
-	a1 = inb(PIC1_DATA);
-	a2 = inb(PIC2_DATA);
-
-	return ((uint32_t)a1) | (((uint32_t)a2) << 8);
+static inline void pic_eoi_spurious(uint8_t irq) {
 }
 
 static inline void pic_setirqmask(uint8_t irq) {
@@ -107,8 +92,8 @@ static inline void pic_setirqmask(uint8_t irq) {
 		irq -= 8;
 	}
 
-	value = inb(port) | (1 << irq);
-	outb(port, value);
+	value = inb_p(port) | (1 << irq);
+	outb_p(port, value);
 }
 
 static inline void pic_clrirqmask(uint8_t irq) {
@@ -122,8 +107,8 @@ static inline void pic_clrirqmask(uint8_t irq) {
 		port = PIC2_DATA;
 		irq -= 8;
 	}
-	value = inb(port) & ~(1 << irq);
-	outb(port, value);
+	value = inb_p(port) & ~(1 << irq);
+	outb_p(port, value);
 }
 
 #endif

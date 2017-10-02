@@ -51,6 +51,7 @@ void scheduler_yield();
 
 static inline void spinlock_acquire_irqsave(spinlock_t __attribute__((unused)) * p, unsigned long __attribute__((unused)) *flags) {
 	irq_save_local(flags);
+	irq_disable();
 	spinlock_acquire(p);
 }
 

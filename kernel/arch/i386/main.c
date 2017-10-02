@@ -34,7 +34,7 @@ either expressed or implied, of the IKAROS Project.
 #include <kernel/panic.h>
 #include <kernel/tss.h>
 #include <kernel/gdt.h>
-#include <kernel/idt.h>
+#include <kernel/irq.h>
 #include <kernel/pic.h>
 #include <sys/io.h>
 #include <sys/elf32.h>
@@ -81,79 +81,52 @@ extern uintptr_t _kernel_end;
 #define CONFIG_MAX_CPUS 16
 #endif
 
-tss_t*    _tss[CONFIG_MAX_CPUS];
-uint64_t*   _gdt;
-idt_t*   _idt;
-
-extern void _int3();
-extern void _int13();
-extern void _irq1();
-extern void _irq12();
-
-gdt_desc_t  _gdt_desc;
-idt_desc_t  _idt_desc;
-
-int               _ps2_key_counter;
-int               _ps2_key;
-wait_queue_head_t _ps2_queue;
-char              _ps2_buffer[16];
-int               _ps2_codelen;
-
-void init_ps2() {
-	_ps2_key_counter = 0;
-	_ps2_key = 0;
-	_ps2_codelen = 0;
-	wait_queue_init(&_ps2_queue);
-}
-
-void post_ps2() {
-	// Wake up waiting threads
-	_ps2_key_counter++;
-	wait_wake_up_interruptible(&_ps2_queue);
-}
-
-int read_ps2() {
-	int key = _ps2_key_counter;
-	WAIT_EVENT_INTERRUPTIBLE(_ps2_queue, key != _ps2_key_counter);
-	return _ps2_key;
-}
+tss_t          tss;
+uint64_t       _gdt[10];
+gdt_desc_t     gdt_desc;
 
 
-void breakpoint_handler() {
-	printf("BREAKPOINT!\n");
-}
+// void breakpoint_handler() {
+// 	printf("BREAKPOINT!\n");
+// }
 
-void gpf_handler() {
-	printf("GPF!\n");
-}
+// void gpf_handler() {
+// 	printf("GPF!\n");
+// }
 
-void irq1_handler() {
-	unsigned char scan_code = inb(0x60);
-	pic_eoi(1);
-	_ps2_buffer[_ps2_codelen] = scan_code;
-	_ps2_key = 'A';
-	post_ps2();
 
-	//printf("PS/2 PORT1: SCANCODE %d!\n", scan_code);
-}
 
-void irq12_handler() {
-	pic_eoi(12);
-	printf("PS/2 PORT 2!\n");
-}
+// void irq1_handler() {
+// 	unsigned char __attribute__((unused)) scan_code[6];
+// 	int i = 0;
+// 	while((inb_p(0x64) & 1) == 1) {
+// 		scan_code[i] = inb_p(0x60);
+// 		i++;
+// 	}
 
-void _init_idt() {
-	_idt = malloc(2048);
-	memset(_idt, 0, 2048);
-	idt_encode(&_idt[0x03], _int3, 0x08, 0x8E);
-	idt_encode(&_idt[13], _int13, 0x08, 0x8E);
-	idt_encode(&_idt[0x21], _irq1,  0x08, 0x8e);
-	idt_encode(&_idt[0x2C], _irq12, 0x08, 0x8e);
-	_idt_desc.base = (uintptr_t)_idt;
-	_idt_desc.limit = 2048;
-	idt_reload(&_idt_desc);
-	asm volatile("sti");
-}
+// 	pic_eoi(1);
+
+// 	// if(i == 1) {
+// 	// 	switch(scan_code[0]) {
+// 	// 		case 0x1E:
+// 	// 			_ps2_key = 'a';
+// 	// 			//printf("a");
+// 	// 			break;
+// 	// 		case 0x30:
+// 	// 			_ps2_key = 'b';
+// 	// 			//printf("a");
+// 	// 			break;
+// 	// 	}
+// 	// }
+// 	post_ps2();
+
+// 	//printf("PS/2 PORT1: SCANCODE %d!\n", scan_code);
+// }
+
+// void irq12_handler() {
+// 	pic_eoi(12);
+// 	printf("PS/2 PORT 2!\n");
+// }
 
 void _init_tss() {
 	// TODO: Init Task State Segment
@@ -164,11 +137,10 @@ void _init_gdt() {
 	gdt_t gdt[4];
 	
 	// Need to initialize TSS struct before GDT
-	memset(_tss, 0, CONFIG_MAX_CPUS * sizeof(tss_t));
-	_tss[0] = malloc(sizeof(tss_t));
-	_tss[0]->ss = 0x10;
-	_tss[0]->esp0 = 0; // TODO: Set this to syscall kernel stack base
-	_tss[0]->trace = sizeof(tss_t);
+	memset(&tss, 0, sizeof(tss_t));
+	tss.ss = 0x10;
+	tss.esp0 = 0; // TODO: Set this to syscall kernel stack base
+	tss.trace = sizeof(tss_t);
 
 	gdt[0].base = 0;
 	gdt[0].limit = 0;
@@ -182,20 +154,19 @@ void _init_gdt() {
 	gdt[2].limit = 0xffffffff;
 	gdt[2].type = 0x92;
 
-	gdt[3].base = (uintptr_t)_tss[0];
+	gdt[3].base = (uintptr_t)&tss;
 	gdt[3].limit = sizeof(tss_t);
 	gdt[3].type = 0x89;
 
-	_gdt = malloc(40);
-	memset(_gdt, 0, 40);
+	memset(_gdt, 0, sizeof(uint64_t) * 10);
 	for(i = 0; i < 4; i++) {
 		gdt_encode((uint8_t*)&_gdt[i], gdt[i]);
 	}
 	
-	_gdt_desc.base = (uintptr_t)_gdt;
-	_gdt_desc.limit = 39;
+	gdt_desc.base = (uintptr_t)_gdt;
+	gdt_desc.limit = 79;
 
-	void* gdt_addr = &_gdt_desc;
+	void* gdt_addr = &gdt_desc;
 	gdt_reload(gdt_addr);
 }
 
@@ -410,7 +381,7 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 	// and updating the address spaces of each process as the kernel
 	// address space changes is complex. Much better to setup empty page
 	// tables, which can be reused in other address spaces, and automatically
-	// get updated everywhere 
+	// get updated everywhere
 
 	// Reload CR3 with new page directory
 	mm_load_cr3(pagedir_page << PAGE_SHIFT);
@@ -428,16 +399,17 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 	// and safely for the kernel, and general purpose memory allocation
 	// (malloc/free) should work.
 
-	init_ps2();
+	//init_ps2();
 
 	_init_gdt();
 	_init_tss();
 	pic_init(0x20, 0x28);
-	_init_idt();
+	irq_init();
 
 	outb(PIC1_DATA, 0xFD);
-	//outb(PIC1_DATA, 0xFF);
 	outb(PIC2_DATA, 0xFF);
+
+	asm volatile( "sti" );
 
 	kernel_main(cmdline);
 }

@@ -42,14 +42,14 @@ struct _idt {
 typedef struct _gdt_desc idt_desc_t;
 typedef struct _idt      idt_t;
 
-static inline void idt_reload(idt_desc_t* idt_desc) {
-	asm __volatile__
-	(
-	   "lidt (%0)"
-	   :
-	   : "r" (idt_desc)
-	);
-}
+// static inline void idt_reload(idt_desc_t* idt_desc) {
+// 	asm __volatile__
+// 	(
+// 	   "lidt (%0)"
+// 	   :
+// 	   : "r" (idt_desc)
+// 	);
+// }
 
 static inline void idt_encode(idt_t* idt, void* base, uint16_t selector, uint8_t type) {
 	idt->base_lower  = ((uintptr_t)base) & 0xFFFF;

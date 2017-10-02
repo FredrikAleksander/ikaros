@@ -43,13 +43,16 @@ void wait_prepare_to_wait(wait_queue_head_t* queue, wait_queue_t* wq, int state)
 	unsigned long flags;
 	spinlock_acquire_irqsave(&queue->lock, &flags);
 	task_set_state(running_task, state);
-	spinlock_release_irqload(&queue->lock, &flags);
 	wait_add_to_queue(queue, wq);
+	spinlock_release_irqload(&queue->lock, &flags);
 }
 
 void wait_finish(wait_queue_head_t* queue, wait_queue_t* wq) {
+	unsigned long flags;
+	spinlock_acquire_irqsave(&queue->lock, &flags);
 	task_set_state(running_task, TASK_RUNNING);
 	wait_remove_from_queue(queue, wq);
+	spinlock_release_irqload(&queue->lock, &flags);
 }
 
 void wait_add_to_queue(wait_queue_head_t* queue, wait_queue_t* wq) {
@@ -78,10 +81,13 @@ void wait_remove_from_queue(wait_queue_head_t* queue, wait_queue_t* wq) {
 }
 
 void wait_wake_up_interruptible(wait_queue_head_t* queue) {
+	unsigned long flags;
+	spinlock_acquire_irqsave(&queue->lock, &flags);
 	wait_queue_t* wq = queue->next;
 	while(wq != 0) {
 		task_set_state(wq->task, TASK_RUNNING);
 		queue->next = wq->next;
 		wq = queue->next;
 	}
+	spinlock_release_irqload(&queue->lock, &flags);
 }

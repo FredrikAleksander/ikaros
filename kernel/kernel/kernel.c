@@ -31,10 +31,33 @@ either expressed or implied, of the IKAROS Project.
 #include <kernel/panic.h>
 #include <kernel/memory_map.h>
 #include <kernel/scheduler/scheduler.h>
+#include <kernel/scheduler/wait.h>
 #include <kernel/tty.h>
 
-int read_ps2();
-void post_ps2();
+int               _ps2_key_counter;
+int               _ps2_key;
+wait_queue_head_t _ps2_queue;
+char              _ps2_buffer[16];
+int               _ps2_codelen;
+
+void init_ps2() {
+	_ps2_key_counter = 0;
+	_ps2_key = 'Z';
+	_ps2_codelen = 0;
+	wait_queue_init(&_ps2_queue);
+}
+
+void post_ps2() {
+	// Wake up waiting threads
+	_ps2_key_counter++;
+	wait_wake_up_interruptible(&_ps2_queue);
+}
+
+int read_ps2() {
+	int key = _ps2_key_counter;
+	WAIT_EVENT_INTERRUPTIBLE(_ps2_queue, key != _ps2_key_counter);
+	return _ps2_key;
+}
 
 void kash_main() {
 	for(;;) {
@@ -57,11 +80,13 @@ void kernel_main(const char* __attribute__ ((unused)) cmdline) {
 	//memory_map_print();
 	printf("Command Line: %s\n", cmdline);
 #endif
+	init_ps2();
 	scheduler_initialize();
-	//scheduler_create_thread("kboot", detect_boot_device);
+	scheduler_create_thread("kboot", detect_boot_device);
 	scheduler_create_thread("kash", kash_main);
 	for(;;) {
 		scheduler_yield(); // Release control if possible
 		// TODO: Do idle work here, like indexing, caching, preallocating etc
+		//printf("Kernel main\n");
 	}
 }

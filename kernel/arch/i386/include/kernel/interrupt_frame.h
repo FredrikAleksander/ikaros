@@ -26,28 +26,17 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
+#ifndef __ARCH_I386_KERNEL__INTERRUPT_FRAME_H
+#define __ARCH_I386_KERNEL__INTERRUPT_FRAME_H 1
 
-.align   4
-.global breakpoint_handler
-.global irq1_handler
-.global irq12_handler
-.global gpf_handler
-.global _int3
-.global _irq1
-.global _irq12
-.global _int12
-.global _int13
+#include <stdint.h>
 
-_irq1:
-	call irq1_handler
-	iret
-_irq12:
-	call irq12_handler
-	iret
+typedef struct interrupt_frame {
+	uint32_t ip;
+	uint32_t cs;
+	uint32_t flags;
+	uint32_t sp;
+	uint32_t ss;
+} interrupt_frame_t;
 
-_int3:
-	call breakpoint_handler
-	iret
-_int13:
-	call gpf_handler
-	iret
+#endif
