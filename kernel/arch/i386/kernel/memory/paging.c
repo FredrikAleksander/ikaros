@@ -26,38 +26,38 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#ifndef __ARCH_I386_KERNEL_DEVICES__PCI_H
-#define __ARCH_I386_KERNEL_DEVICES__PCI_H
+#include <kernel/memory/paging.h>
+#include <kernel/memory/memory_region.h>
+#include <kernel/memory/memory_manager.h>
+#include <kernel/panic.h>
+#include <stdio.h>
 
-#include <sys/io.h>
-#include <stdint.h>
+#define PAGE_SIZE  4096
+#define PAGE_SHIFT 12
 
-static inline uint16_t pci_config_readw(uint8_t bus, uint8_t slot, 
-	uint8_t func, uint8_t offset)
-{
-	uint32_t address;
-	uint32_t lbus = bus;
-	uint32_t lslot = slot;
-	uint32_t lfunc = func;
-	uint16_t tmp = 0;
+void paging_init() {
+	uintptr_t entry;
+	uintptr_t  page;
+	uintptr_t  start;
+	uintptr_t  count = 0;
+	uintptr_t  offset;
+	uintptr_t  end   = 1024;
 
-	address = (uint32_t)((lbus << 16) | (lslot << 11) | (lfunc << 8) |
-		(offset & 0xfc) | (uint32_t)0x80000000);
+	for(start = 768; start < end; start++) {
+		offset = 0xFFFFF000 + start * 4U;
+		entry  = *(volatile uintptr_t*)offset;
 
-	outl(0xCF8, address);
-	tmp = (uint16_t)((inl(0xFC) >> ((offset & 2) * 8)) & 0xffff);
-	return tmp;
+		if((entry & 0x01) == 0) {
+			// Missing page table, allocate and map
+			if(memory_region_alloc_page(&page) != 0) {
+				PANIC("Failed to initialize kernel address space\n");
+			}
+			*((volatile uintptr_t*)offset) = (page << PAGE_SHIFT) | 0x03;
+			
+			mm_invlpg(0xFFC00000 + start * 4096);
+			memset((uintptr_t*)(0xFFC00000 + start * 4096), 0, 4096);
+
+			count++;
+		}
+	}	
 }
-
-static inline uint32_t pci_get_device_id(uint8_t bus, uint8_t slot) {
-	uint16_t vendor;
-	uint16_t device;
-
-	if((vendor = pci_config_readw(bus, slot, 0, 0)) != 0xFFFF) {
-		device = pci_config_readw(bus, slot, 0, 2);
-		return (((uint32_t)vendor) << 16) | device;
-	}
-	return 0xFFFFFFFF;
-}
-
-#endif

@@ -26,37 +26,40 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#ifndef __ARCH__I386__IDT_H
-#define __ARCH__I386__IDT_H 1
+#ifndef __KERNEL_MEMORY__PAGE_ALLOCATOR_H
+#define __KERNEL_MEMORY__PAGE_ALLOCATOR_H 1
 
-#include <kernel/gdt.h>
+#include <stdint.h>
+#include <kernel/memory/page.h>
 
-struct _idt {
-	uint16_t base_lower;
-	uint16_t selector;
-	uint8_t  ist;
-	uint8_t  type;
-	uint16_t base_higher;
-} __attribute__ ((packed));
+/*
+#define MEMORY_ZONE_MAX_ORDER 10
 
-typedef struct _gdt_desc idt_desc_t;
-typedef struct _idt      idt_t;
+typedef struct memory_free_list {
+	struct memory_free_list* next;
+	page_t                   page;
+} memory_free_list_t;
 
-// static inline void idt_reload(idt_desc_t* idt_desc) {
-// 	asm __volatile__
-// 	(
-// 	   "lidt (%0)"
-// 	   :
-// 	   : "r" (idt_desc)
-// 	);
-// }
+typedef struct memory_free_list_head {
+	memory_free_list_t head;
+	size_t             length;
+} memory_free_list_head_t;
 
-static inline void idt_encode(idt_t* idt, void* base, uint16_t selector, uint8_t type) {
-	idt->base_lower  = ((uintptr_t)base) & 0xFFFF;
-	idt->selector    = selector;
-	idt->ist         = 0;
-	idt->type        = type;
-	idt->base_higher = (((uintptr_t)base) & 0xFFFF0000) >> 16;
+typedef struct memory_free_area {
+	memory_free_list_head_t free_list;
+	uintptr_t*              bitmap;
+} memory_free_area_t;
+
+typedef struct memory_zone {
+	memory_free_area_t areas[MEMORY_ZONE_MAX_ORDER];
+} memory_zone_t;*/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef __cplusplus
 }
+#endif
 
 #endif

@@ -26,11 +26,30 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#ifndef __KERNEL_DEVICES_ATA__ATA_DEVICE_H
-#define __KERNEL_DEVICES_ATA__ATA_DEVICE_H 1
+#ifndef __KERNEL_MEMORY__MEMORY_MAP_H
+#define __KERNEL_MEMORY__MEMORY_MAP_H 1
 
-typedef struct ata_device {
+#include <stddef.h>
+#include <stdint.h>
 
-} ata_device_t;
+#define MEMORY_MAP_TYPE_AVAILABLE           1
+#define MEMORY_MAP_TYPE_ACPI                3
+#define MEMORY_MAP_TYPE_HIBERNATE           4
+#define MEMORY_MAP_TYPE_INVALID             5
+
+typedef struct _memory_map {
+	uintptr_t addr;
+	uintptr_t length;
+	uint32_t type;
+} memory_map_t;
+
+void 		  memory_map_initialize();
+void          memory_map_add_region(uintptr_t addr, uintptr_t size, uint32_t type);
+memory_map_t* memory_map_begin();
+memory_map_t* memory_map_end();
+memory_map_t* memory_map_available_begin();
+memory_map_t* memory_map_available_end();
+void          memory_map_print();
+void          memory_map_available_print();
 
 #endif

@@ -30,7 +30,7 @@ either expressed or implied, of the IKAROS Project.
 #define __KERNEL_SCHEDULER__SCHEDULER_H 1
 
 #include <kernel/scheduler/task.h>
-#include <kernel/irq.h>
+#include <kernel/irq/irq.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,8 +42,9 @@ void scheduler_initialize();
 void scheduler_create_thread(const char* name, task_entry_point entry_point);
 void scheduler_enable_preemption();
 void scheduler_disable_preemption();
-void scheduler_exit(int exit_code);
+void scheduler_sleep(uint64_t ms);
 void scheduler_yield();
+void scheduler_exit(int exit_code);
 
 #ifdef __cplusplus
 }

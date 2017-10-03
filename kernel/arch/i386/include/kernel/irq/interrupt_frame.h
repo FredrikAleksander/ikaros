@@ -26,30 +26,17 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#ifndef __KERNEL__MEMORY_MAP_H
-#define __KERNEL__MEMORY_MAP_H 1
+#ifndef __ARCH_I386_KERNEL_IRQ__INTERRUPT_FRAME_H
+#define __ARCH_I386_KERNEL_IRQ__INTERRUPT_FRAME_H 1
 
-#include <stddef.h>
 #include <stdint.h>
 
-#define MEMORY_MAP_TYPE_AVAILABLE           1
-#define MEMORY_MAP_TYPE_ACPI                3
-#define MEMORY_MAP_TYPE_HIBERNATE           4
-#define MEMORY_MAP_TYPE_INVALID             5
-
-typedef struct _memory_map {
-	uintptr_t addr;
-	uintptr_t length;
-	uint32_t type;
-} memory_map_t;
-
-void 		  memory_map_initialize();
-void          memory_map_add_region(uintptr_t addr, uintptr_t size, uint32_t type);
-memory_map_t* memory_map_begin();
-memory_map_t* memory_map_end();
-memory_map_t* memory_map_available_begin();
-memory_map_t* memory_map_available_end();
-void          memory_map_print();
-void          memory_map_available_print();
+typedef struct interrupt_frame {
+	uint32_t ip;
+	uint32_t cs;
+	uint32_t flags;
+	uint32_t sp;
+	uint32_t ss;
+} interrupt_frame_t;
 
 #endif

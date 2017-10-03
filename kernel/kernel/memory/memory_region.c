@@ -26,7 +26,8 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#include <kernel/memory_region.h>
+#include <kernel/memory/memory_region.h>
+#include <kernel/memory/memory_map.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -45,11 +46,16 @@ static void _memory_region_release() {
 void memory_region_acquire() { _memory_region_acquire(); }
 void memory_region_release() { _memory_region_release(); }
 
-void memory_region_init(uintptr_t base, uintptr_t length) {
+void memory_region_init() {
+}
+
+void memory_region_early_init(uintptr_t base, uintptr_t length) {
+	uintptr_t max_size = MEMORY_BITMAP_SIZE * 32;
+
 	_memory_region_acquire();
 	_initial_memory_region.next   = 0;
 	_initial_memory_region.base   = base;
-	_initial_memory_region.length = length;
+	_initial_memory_region.length = length > max_size ? max_size : length;
 	memset(_initial_memory_region.bitmap, 0, MEMORY_BITMAP_SIZE);
 	_root_memory_region = &_initial_memory_region;
 	_last_free_region = _root_memory_region;
@@ -68,6 +74,7 @@ int memory_region_alloc_page(page_t* page) {
 		region = memory_region_find_and_set(_root_memory_region, _last_free_region, page);
 	}
 	if(region == 0) {
+		_memory_region_release();
 		return -1;
 	}
 	_last_free_region = region;
@@ -80,3 +87,9 @@ void memory_region_dealloc_page(page_t page) {
 	memory_region_setbit(_root_memory_region, page, 0);
 	_memory_region_release();
 }
+
+// void memory_region_add(uintptr_t base, uintptr_t length) {
+// 	if(length > 2048) {
+// 		// Split
+// 	}
+// }

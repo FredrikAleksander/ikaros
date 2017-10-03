@@ -26,12 +26,12 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#ifndef __KERNEL__MEMORY_REGION_H
-#define __KERNEL__MEMORY_REGION_H 1
+#ifndef __KERNEL_MEMORY__MEMORY_REGION_H
+#define __KERNEL_MEMORY__MEMORY_REGION_H 1
 
 #include <stdint.h>
 #include <strings.h>
-#include <kernel/page.h>
+#include <kernel/memory/page.h>
 
 #define MEMORY_BITMAP_SIZE 2048
 
@@ -119,7 +119,8 @@ extern "C" {
 
 void             memory_region_acquire();
 void             memory_region_release();
-void             memory_region_init(uintptr_t base, uintptr_t length);
+void             memory_region_early_init(uintptr_t base, uintptr_t length);
+void             memory_region_init();
 void             memory_region_add(uintptr_t base, uintptr_t length);
 memory_region_t* memory_region_enumerate();
 int              memory_region_alloc_page(page_t* page);

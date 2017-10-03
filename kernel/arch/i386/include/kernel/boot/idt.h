@@ -26,9 +26,37 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#ifndef __KERNEL_DEVICES_ATA__ATA_H
-#define __KERNEL_DEVICES_ATA__ATA_H 1
+#ifndef __ARCH__I386_KERNEL_BOOT__IDT_H
+#define __ARCH__I386_KERNEL_BOOT__IDT_H 1
 
+#include <kernel/boot/gdt.h>
 
+struct _idt {
+	uint16_t base_lower;
+	uint16_t selector;
+	uint8_t  ist;
+	uint8_t  type;
+	uint16_t base_higher;
+} __attribute__ ((packed));
+
+typedef struct _gdt_desc idt_desc_t;
+typedef struct _idt      idt_t;
+
+// static inline void idt_reload(idt_desc_t* idt_desc) {
+// 	asm __volatile__
+// 	(
+// 	   "lidt (%0)"
+// 	   :
+// 	   : "r" (idt_desc)
+// 	);
+// }
+
+static inline void idt_encode(idt_t* idt, void* base, uint16_t selector, uint8_t type) {
+	idt->base_lower  = ((uintptr_t)base) & 0xFFFF;
+	idt->selector    = selector;
+	idt->ist         = 0;
+	idt->type        = type;
+	idt->base_higher = (((uintptr_t)base) & 0xFFFF0000) >> 16;
+}
 
 #endif

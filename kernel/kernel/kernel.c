@@ -29,10 +29,11 @@ either expressed or implied, of the IKAROS Project.
 
 #include <stdio.h>
 #include <kernel/panic.h>
-#include <kernel/memory_map.h>
+#include <kernel/memory/memory_map.h>
 #include <kernel/scheduler/scheduler.h>
 #include <kernel/scheduler/wait.h>
 #include <kernel/tty.h>
+#include <kernel/pci/pci.h>
 
 int               _ps2_key_counter;
 int               _ps2_key;
@@ -47,6 +48,7 @@ void init_ps2() {
 	wait_queue_init(&_ps2_queue);
 }
 
+// Gets called by IRQ1 handler
 void post_ps2() {
 	// Wake up waiting threads
 	_ps2_key_counter++;
@@ -72,7 +74,7 @@ void detect_boot_device() {
 	scheduler_exit(0);
 }
 
-void kernel_main(const char* __attribute__ ((unused)) cmdline) {
+void kernel_main(const char* cmdline) {
 	//terminal_initialize();
 #ifndef CONFIG_SILENT
 	printf("\e[44;37;1mIKAROS v0.1\e[K\e[40;37m");
@@ -80,6 +82,8 @@ void kernel_main(const char* __attribute__ ((unused)) cmdline) {
 	//memory_map_print();
 	printf("Command Line: %s\n", cmdline);
 #endif
+	pci_init();
+
 	init_ps2();
 	scheduler_initialize();
 	scheduler_create_thread("kboot", detect_boot_device);
@@ -87,6 +91,5 @@ void kernel_main(const char* __attribute__ ((unused)) cmdline) {
 	for(;;) {
 		scheduler_yield(); // Release control if possible
 		// TODO: Do idle work here, like indexing, caching, preallocating etc
-		//printf("Kernel main\n");
 	}
 }

@@ -26,10 +26,10 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#ifndef __ARCH_I386__MEMORY_MANAGER_H
-#define __ARCH_I386__MEMORY_MANAGER_H 1
+#ifndef __ARCH_I386_KERNEL_MEMORY__MEMORY_MANAGER_H
+#define __ARCH_I386_KERNEL_MEMORY__MEMORY_MANAGER_H 1
 
-#include <kernel/memory_region.h>
+#include <kernel/memory/memory_region.h>
 #include <stdint.h>
 #include <stdio.h>
 

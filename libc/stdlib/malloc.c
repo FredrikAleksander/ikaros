@@ -30,8 +30,8 @@ either expressed or implied, of the IKAROS Project.
 #include <stdlib.h>
 #include <stdio.h>
 #ifdef __is_libk // libk
-#include <kernel/memory_region.h>
-#include <kernel/memory_manager.h>
+#include <kernel/memory/memory_region.h>
+#include <kernel/memory/memory_manager.h>
 #include <kernel/panic.h>
 
 typedef struct _malloc_freelist {

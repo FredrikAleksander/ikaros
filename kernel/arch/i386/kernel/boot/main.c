@@ -26,22 +26,24 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#include <kernel/multiboot2.h>
+#include <kernel/acpi/acpi.h>
+#include <kernel/boot/multiboot2.h>
 #include <kernel/tty.h>
-#include <kernel/memory_map.h>
-#include <kernel/memory_region.h>
-#include <kernel/memory_manager.h>
+#include <kernel/memory/memory_map.h>
+#include <kernel/memory/memory_region.h>
+#include <kernel/memory/memory_manager.h>
 #include <kernel/panic.h>
-#include <kernel/tss.h>
-#include <kernel/gdt.h>
-#include <kernel/irq.h>
-#include <kernel/pic.h>
+#include <kernel/scheduler/tss.h>
+#include <kernel/boot/gdt.h>
+#include <kernel/irq/irq.h>
+#include <kernel/irq/pic.h>
 #include <sys/io.h>
 #include <sys/elf32.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <kernel/scheduler/wait.h>
+#include <kernel/memory/paging.h>
 
 #define _TOSTRING(x) #x
 #define _TOSTRING_VALUE(x) _TOSTRING(x)
@@ -77,56 +79,9 @@ extern void*     kernel_malloc_freelist;
 extern uintptr_t _kernel_start;
 extern uintptr_t _kernel_end;
 
-#ifndef CONFIG_MAX_CPUS
-#define CONFIG_MAX_CPUS 16
-#endif
-
 tss_t          tss;
 uint64_t       _gdt[10];
 gdt_desc_t     gdt_desc;
-
-
-// void breakpoint_handler() {
-// 	printf("BREAKPOINT!\n");
-// }
-
-// void gpf_handler() {
-// 	printf("GPF!\n");
-// }
-
-
-
-// void irq1_handler() {
-// 	unsigned char __attribute__((unused)) scan_code[6];
-// 	int i = 0;
-// 	while((inb_p(0x64) & 1) == 1) {
-// 		scan_code[i] = inb_p(0x60);
-// 		i++;
-// 	}
-
-// 	pic_eoi(1);
-
-// 	// if(i == 1) {
-// 	// 	switch(scan_code[0]) {
-// 	// 		case 0x1E:
-// 	// 			_ps2_key = 'a';
-// 	// 			//printf("a");
-// 	// 			break;
-// 	// 		case 0x30:
-// 	// 			_ps2_key = 'b';
-// 	// 			//printf("a");
-// 	// 			break;
-// 	// 	}
-// 	// }
-// 	post_ps2();
-
-// 	//printf("PS/2 PORT1: SCANCODE %d!\n", scan_code);
-// }
-
-// void irq12_handler() {
-// 	pic_eoi(12);
-// 	printf("PS/2 PORT 2!\n");
-// }
 
 void _init_tss() {
 	// TODO: Init Task State Segment
@@ -267,7 +222,7 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 			else {
 				size = max_size;
 			}
-			memory_region_init(memory_map->addr >> PAGE_SHIFT, size >> PAGE_SHIFT);
+			memory_region_early_init(memory_map->addr >> PAGE_SHIFT, size >> PAGE_SHIFT);
  		}
 	}
 
@@ -333,6 +288,9 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 	mm_invlpg(0xFFFFF000);
 	mm_invlpg(0xFFFFE000);
 
+	memset(0xFFFFE000, 0, 4096);
+	memset(0xFFFFF000, 0, 4096);
+
 	// Point last entry of page directory to the page directory itself
 	offset = 0xFFFFF000 + (4 * 1023);
 	*((volatile uintptr_t*)offset) = (pagedir_page << PAGE_SHIFT) | 0x03;
@@ -386,6 +344,9 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 	// Reload CR3 with new page directory
 	mm_load_cr3(pagedir_page << PAGE_SHIFT);
 
+	paging_init();
+	memory_region_init();
+
 	// Need to initialize the kernel heap. Simple stuff
 	kernel_heap_start = kernel_end;
 	if(kernel_heap_start % PAGE_SIZE != 0) {
@@ -405,6 +366,13 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 	_init_tss();
 	pic_init(0x20, 0x28);
 	irq_init();
+
+	acpi_init(0);
+
+	rsdp_desc_t* t = acpi_get_rsdp();
+	if(t != 0) {
+		printf("Found ACPI root system descriptor table\n");
+	}
 
 	outb(PIC1_DATA, 0xFD);
 	outb(PIC2_DATA, 0xFF);

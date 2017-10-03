@@ -26,36 +26,24 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-
-#ifndef __ARCH__I386__TSS_H
-#define __ARCH__I386__TSS_H
+#ifndef __KERNEL_MEMORY__VM_H
+#define __KERNEL_MEMORY__VM_H 1
 
 #include <stdint.h>
-#include <stddef.h>
 
-struct _tss {
-	uint16_t back_link, :16;
-    void *esp0;                         /* Ring 0 stack virtual address. */
-    uint16_t ss0, :16;                  /* Ring 0 stack segment selector. */
-    void *esp1;
-    uint16_t ss1, :16;
-    void *esp2;
-    uint16_t ss2, :16;
-    uint32_t cr3;
-    void (*eip) (void);
-    uint32_t eflags;
-    uint32_t eax, ecx, edx, ebx;
-    uint32_t esp, ebp, esi, edi;
-    uint16_t es, :16;
-    uint16_t cs, :16;
-    uint16_t ss, :16;
-    uint16_t ds, :16;
-    uint16_t fs, :16;
-    uint16_t gs, :16;
-    uint16_t ldt, :16;
-    uint16_t trace, bitmap;
-} __attribute__((packed));
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-typedef struct _tss tss_t;
+// Allocate virtual memory address range. THIS DOES NOT ALLOCATE OR MAP PHYSICAL MEMORY
+void* vm_alloc(size_t size, size_t align);
+void  vm_free(void* vm, size_t size);
+
+int   vm_map(void* vaddr, uintptr_t* pages, size_t num_pages);
+int   vm_unmap(void* vaddr, size_t num_pages);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

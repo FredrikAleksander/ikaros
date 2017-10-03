@@ -27,7 +27,7 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
  #define ASM_FILE 1
- #include "../../include/kernel/multiboot2.h"
+ #include "../../../../include/kernel/boot/multiboot2.h"
 
 # Declare constants for the multiboot header.
 .set ALIGN,    1<<0             # align loaded modules on page boundaries

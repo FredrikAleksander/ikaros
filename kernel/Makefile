@@ -29,29 +29,29 @@ LIBS:=$(LIBS) $(KERNEL_ARCH_LIBS)
 
 KERNEL_OBJS=\
 $(KERNEL_ARCH_OBJS) \
-kernel/memory_map.o \
-kernel/memory_region.o \
-kernel/scheduler.o \
-kernel/wait.o \
+kernel/memory/memory_map.o \
+kernel/memory/memory_region.o \
+kernel/scheduler/scheduler.o \
+kernel/scheduler/wait.o \
 kernel/kernel.o \
 
 KERNEL_TEST_FILES=kernel/tests/kernel_tests.c
 
 OBJS=\
-$(ARCHDIR)/crti.o \
-$(ARCHDIR)/crtbegin.o \
+$(ARCHDIR)/kernel/boot/crti.o \
+$(ARCHDIR)/kernel/boot/crtbegin.o \
 $(KERNEL_OBJS) \
-$(ARCHDIR)/crtend.o \
-$(ARCHDIR)/crtn.o \
+$(ARCHDIR)/kernel/boot/crtend.o \
+$(ARCHDIR)/kernel/boot/crtn.o \
 
 LINK_LIST=\
 $(LDFLAGS) \
-$(ARCHDIR)/crti.o \
-$(ARCHDIR)/crtbegin.o \
+$(ARCHDIR)/kernel/boot/crti.o \
+$(ARCHDIR)/kernel/boot/crtbegin.o \
 $(KERNEL_OBJS) \
 $(LIBS) \
-$(ARCHDIR)/crtend.o \
-$(ARCHDIR)/crtn.o \
+$(ARCHDIR)/kernel/boot/crtend.o \
+$(ARCHDIR)/kernel/boot/crtn.o \
 
 .PHONY: all clean install install-headers install-kernel test
 .SUFFIXES: .o .c .S
@@ -69,7 +69,7 @@ test: kernel.test
 	clear
 	./kernel.test
 
-$(ARCHDIR)/crtbegin.o $(ARCHDIR)/crtend.o:
+$(ARCHDIR)/kernel/boot/crtbegin.o $(ARCHDIR)/kernel/boot/crtend.o:
 	OBJ=`$(CC) $(CFLAGS) $(LDFLAGS) -print-file-name=$(@F)` && cp "$$OBJ" $@
 
 .c.o:

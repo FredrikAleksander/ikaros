@@ -26,8 +26,8 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#ifndef __ARCH_I386_KERNEL__PIC_H
-#define __ARCH_I386_KERNEL__PIC_H 1
+#ifndef __ARCH_I386_KERNEL_IRQ__PIC_H
+#define __ARCH_I386_KERNEL_IRQ__PIC_H 1
 
 #include <sys/io.h>
 

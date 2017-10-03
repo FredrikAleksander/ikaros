@@ -26,17 +26,48 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#ifndef __ARCH_I386_KERNEL__INTERRUPT_FRAME_H
-#define __ARCH_I386_KERNEL__INTERRUPT_FRAME_H 1
+#ifndef __ARCH_I386_KERNEL_IRQ__IRQ_H
+#define __ARCH_I386_KERNEL_IRQ__IRQ_H 1
 
-#include <stdint.h>
+#include <kernel/irq/interrupt_frame.h>
 
-typedef struct interrupt_frame {
-	uint32_t ip;
-	uint32_t cs;
-	uint32_t flags;
-	uint32_t sp;
-	uint32_t ss;
-} interrupt_frame_t;
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+uint64_t idt[256];
+
+void irq_init();
+
+#ifdef __cplusplus
+}
+#endif
+
+static inline void irq_enable() {
+	asm volatile("sti");
+}
+
+static inline void irq_disable() {
+	asm volatile("cli");
+}
+
+static inline void irq_save_local(unsigned long* flags) {
+	unsigned long tmp;
+	asm volatile("# __raw_save_flags\n\t"
+	"pushf ; pop %0"
+	: "=rm" (tmp)
+	: /* no input */
+	: "memory");
+
+	*flags = tmp;
+}
+
+static inline void irq_load_local(unsigned long* flags) {
+	unsigned long tmp = *flags;
+	asm volatile("push %0 ; popf"
+	: /* no output */
+	:"g" (tmp)
+	:"memory", "cc");
+}
 
 #endif

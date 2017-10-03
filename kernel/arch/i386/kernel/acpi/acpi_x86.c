@@ -26,12 +26,39 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#ifndef __KERNEL_DEVICES_ATA__ATAPI_H
-#define __KERNEL_DEVICES_ATA__ATAPI_H 1
+#include <kernel/acpi/acpi.h>
+#include <string.h>
 
-#include <stdint.h>
+int rsdp_searched;
+rsdp_desc_t* rsdp_desc;
 
-const uint8_t atapi_readtoc[] = { 0x43 /* ATAPI_READTOC */, 0, 1, 0, 0, 0, 0, 0, 12, 0x40, 0, 0 };
+void acpi_init(rsdp_desc_t* rsdp) {
+	rsdp_searched = rsdp == 0 ? 0 : 1;
+	rsdp_desc = rsdp;
+}
 
+rsdp_desc_t* acpi_get_rsdp() {
+	rsdp_desc_t* rsdp;
+	uintptr_t virtual_base = 0xC0000000;
 
-#endif
+	uintptr_t offset = 0x000E0000;
+	uintptr_t range  = 0x000FFFFF;
+	
+	if(rsdp_searched) {
+		return rsdp_desc;
+	}
+
+	rsdp_searched = 1;
+
+	// Try to find ACPI RSDP Table
+	while(offset < range) {
+		rsdp = (rsdp_desc_t*)(offset + virtual_base);
+		if(memcmp(rsdp->signature, "RSD PTR ", 8) == 0) {
+			rsdp_desc = rsdp;
+			return rsdp_desc;
+		}
+
+		offset += 16;
+	}
+	return rsdp_desc;
+}
