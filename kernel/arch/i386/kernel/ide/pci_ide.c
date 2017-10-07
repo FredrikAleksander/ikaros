@@ -128,8 +128,6 @@ uint8_t pci_ide_read_buffer(pci_ide_controller_t* controller, uint8_t channel, u
 void pci_ide_initialize_controller(pci_function_t __attribute__((unused)) * pci) {
 	uint32_t bar0, bar1, bar2, bar3, bar4;
 	uint8_t bus, slot, func;
-	uint8_t irq_channel0;
-	uint8_t irq_channel1;
 	pci_ide_controller_t* controller = malloc(sizeof(pci_ide_controller_t));
 
 	bus = pci->device->bus;
