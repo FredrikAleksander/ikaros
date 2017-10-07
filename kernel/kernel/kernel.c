@@ -32,8 +32,12 @@ either expressed or implied, of the IKAROS Project.
 #include <kernel/memory/memory_map.h>
 #include <kernel/scheduler/scheduler.h>
 #include <kernel/scheduler/wait.h>
+#include <kernel/irq/timer.h>
 #include <kernel/tty.h>
 #include <kernel/pci/pci.h>
+#include <kernel/ide/ide.h>
+#include <kernel/ide/pci_ide.h>
+#include <kernel/graphics/bochs_vga.h>
 
 int               _ps2_key_counter;
 int               _ps2_key;
@@ -70,8 +74,16 @@ void kash_main() {
 }
 
 void detect_boot_device() {
+	scheduler_sleep(5000);
 	printf("Finding boot media...\n");
 	scheduler_exit(0);
+}
+
+void kernel_idle() {
+	for(;;) {
+		scheduler_yield(); // Release control if possible
+		// TODO: Do idle work here, like indexing, caching, preallocating etc
+	}
 }
 
 void kernel_main(const char* cmdline) {
@@ -82,14 +94,21 @@ void kernel_main(const char* cmdline) {
 	//memory_map_print();
 	printf("Command Line: %s\n", cmdline);
 #endif
-	pci_init();
-
+	timer_init();
 	init_ps2();
+	
 	scheduler_initialize();
+	// Idle Thread must be present early on, as much driver code uses sleeping,
+	// and there must always be a active task
+	scheduler_create_thread("idle", kernel_idle);
 	scheduler_create_thread("kboot", detect_boot_device);
 	scheduler_create_thread("kash", kash_main);
-	for(;;) {
-		scheduler_yield(); // Release control if possible
-		// TODO: Do idle work here, like indexing, caching, preallocating etc
-	}
+	pci_init();
+	ide_init();
+	// Initialize PCI IDE Controller
+	pci_ide_init();
+	//bochs_vga_init();
+
+	
+	scheduler_exit(0);
 }

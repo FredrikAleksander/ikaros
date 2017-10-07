@@ -28,6 +28,7 @@ either expressed or implied, of the IKAROS Project.
 */
 #include <kernel/irq/irq.h>
 #include <kernel/irq/pic.h>
+#include <kernel/scheduler/scheduler.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -261,9 +262,7 @@ static inline void idt_reload(struct idt_desc* idt_desc) {
 
 void post_ps2();
 
-void* timer_handler(void __attribute__ ((unused)) * ctx) {
-	return NULL;
-}
+void* timer_handler(void* ctx);
 void* keyboard_handler(void __attribute__ ((unused))* ctx) {
 	unsigned char __attribute__((unused)) scan_code[6];
 	int i = 0;

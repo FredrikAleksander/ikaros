@@ -369,12 +369,12 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 
 	acpi_init(0);
 
-	rsdp_desc_t* t = acpi_get_rsdp();
-	if(t != 0) {
-		printf("Found ACPI root system descriptor table\n");
-	}
+	// rsdp_desc_t* t = acpi_get_rsdp();
+	// if(t != 0) {
+	// 	printf("Found ACPI root system descriptor table\n");
+	// }
 
-	outb(PIC1_DATA, 0xFD);
+	outb(PIC1_DATA, 0xFC);
 	outb(PIC2_DATA, 0xFF);
 
 	asm volatile( "sti" );

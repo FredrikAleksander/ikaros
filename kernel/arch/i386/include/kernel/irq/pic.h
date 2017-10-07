@@ -52,23 +52,16 @@ either expressed or implied, of the IKAROS Project.
 #define ICW4_BUF_MASTER	0x0C		/* Buffered mode/master */
 #define ICW4_SFNM	0x10		/* Special fully nested (not) */
 
-static inline void pic_init(int pic1, int pic2) {
-	uint8_t  a1, a2;
-	//a1 = inb(PIC1_DATA);
-	//a2 = inb(PIC2_DATA);
 
-	outb_p(PIC1_COMMAND, ICW1_INIT+ICW1_ICW4);
-	outb_p(PIC2_COMMAND, ICW1_INIT+ICW1_ICW4);
-	outb_p(PIC1_DATA, pic1);
-	outb_p(PIC2_DATA, pic2); 
-	outb_p(PIC1_DATA, 4); 
-	outb_p(PIC2_DATA, 2);
-	outb_p(PIC1_DATA, ICW4_8086);
-	outb_p(PIC2_DATA, ICW4_8086);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-	//outb(PIC1_DATA, a1);
-	//outb(PIC2_DATA, a2);
+void pic_init(uint8_t pic1, uint8_t pic2);
+
+#ifdef __cplusplus
 }
+#endif
 
 static inline void pic_eoi(uint8_t irq) {
 	if(irq >= 8) {

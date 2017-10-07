@@ -27,6 +27,8 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
 #include <kernel/scheduler/scheduler.h>
+#include <kernel/scheduler/wait.h>
+#include <kernel/irq/timer.h>
 #include <kernel/panic.h>
 #include <sys/spinlock.h>
 #include <stdlib.h>
@@ -36,11 +38,20 @@ task_t* tasks_tail;
 
 task_t* running_task;
 
+wait_queue_head_t timer_queue;
+
 void scheduler_initialize() {
+	wait_queue_init(&timer_queue);
+
 	tasks = task_wrap("kernel");
 	tasks_tail = tasks;
 	tasks->next = tasks;
 	running_task = tasks;
+}
+
+task_t* scheduler_timer() {
+	wait_wake_up_interruptible(&timer_queue);
+	return NULL;
 }
 
 task_t* scheduler_next_running_task(task_t* task) {
@@ -65,6 +76,11 @@ void scheduler_yield() {
 	running_task = next;
 
 	task_switch(from, &running_task->regs);
+}
+
+void scheduler_sleep(uint64_t ms) {
+	uint64_t sleep_start = timer_ticks();
+	WAIT_EVENT_INTERRUPTIBLE(timer_queue, timer_range_to_ms(sleep_start, timer_ticks()) >= ms);
 }
 
 static inline void tasks_insert(task_t* task) {

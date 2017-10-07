@@ -29,8 +29,11 @@ LIBS:=$(LIBS) $(KERNEL_ARCH_LIBS)
 
 KERNEL_OBJS=\
 $(KERNEL_ARCH_OBJS) \
+kernel/ide/ide.o \
 kernel/memory/memory_map.o \
 kernel/memory/memory_region.o \
+kernel/memory/mmio.o \
+kernel/pci/pci.o \
 kernel/scheduler/scheduler.o \
 kernel/scheduler/wait.o \
 kernel/kernel.o \

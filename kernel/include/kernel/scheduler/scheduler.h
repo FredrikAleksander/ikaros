@@ -38,13 +38,17 @@ extern "C" {
 
 task_t* running_task;
 
-void scheduler_initialize();
-void scheduler_create_thread(const char* name, task_entry_point entry_point);
-void scheduler_enable_preemption();
-void scheduler_disable_preemption();
-void scheduler_sleep(uint64_t ms);
-void scheduler_yield();
-void scheduler_exit(int exit_code);
+void    scheduler_initialize();
+void    scheduler_create_thread(const char* name, task_entry_point entry_point);
+void    scheduler_enable_preemption();
+void    scheduler_disable_preemption();
+// Called by IRQ subsystem. If return value is not NULL,
+// the IRQ subsystem should make a context switch to the specified
+// task on interrupt return
+task_t* scheduler_timer();
+void    scheduler_sleep(uint64_t ms);
+void    scheduler_yield();
+void    scheduler_exit(int exit_code);
 
 #ifdef __cplusplus
 }

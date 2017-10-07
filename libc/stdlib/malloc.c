@@ -64,7 +64,7 @@ static inline int heap_grow() {
 		return err;
 	}
 	mm_map_page((void*)(page << PAGE_SHIFT), (void*)kernel_heap_end, 0x03);
-	kernel_heap_end += 4096;
+	kernel_heap_end += PAGE_SIZE;
 	return 0;
 }
 

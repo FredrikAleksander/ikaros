@@ -1,0 +1,9 @@
+Kernel Address Space:
+
+0xC0000000 - 0xC0100000: 1MB of Physical Memory
+0xC0100000 - 0xCxxxxxxx: Kernel Binary
+0xCxxxxxxx - 0xE0000000: Kernel Heap
+0xE0000000 - 0xE4000000: Kernel Stacks
+0xE4000000 - 0xFFC00000: MMIO
+0xFFC00000 - 0xFFFFF000: Page Tables
+0xFFFFF000 - 0xFFFFFFFF: Page Directory
