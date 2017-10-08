@@ -29,6 +29,7 @@ either expressed or implied, of the IKAROS Project.
 #include <kernel/acpi/acpi.h>
 #include <kernel/boot/multiboot2.h>
 #include <kernel/tty.h>
+#include <kernel/initcall.h>
 #include <kernel/memory/memory_map.h>
 #include <kernel/memory/memory_region.h>
 #include <kernel/memory/memory_manager.h>
@@ -68,8 +69,8 @@ struct multiboot_boot_header {
 	struct multiboot2_header_tag tags[0];
 };
 
-extern long boot_pagedir;
-extern long boot_pagetab1;
+// extern long boot_pagedir;
+// extern long boot_pagetab1;
 
 extern uintptr_t kernel_heap_start;
 extern uintptr_t kernel_heap_end;
@@ -79,52 +80,7 @@ extern void*     kernel_malloc_freelist;
 extern uintptr_t _kernel_start;
 extern uintptr_t _kernel_end;
 
-tss_t          tss;
-uint64_t       _gdt[10];
-gdt_desc_t     gdt_desc;
-
-void _init_tss() {
-	// TODO: Init Task State Segment
-}
-
-void _init_gdt() {
-	int i;
-	gdt_t gdt[4];
-	
-	// Need to initialize TSS struct before GDT
-	memset(&tss, 0, sizeof(tss_t));
-	tss.ss = 0x10;
-	tss.esp0 = 0; // TODO: Set this to syscall kernel stack base
-	tss.trace = sizeof(tss_t);
-
-	gdt[0].base = 0;
-	gdt[0].limit = 0;
-	gdt[0].type = 0;
-	
-	gdt[1].base = 0;
-	gdt[1].limit = 0xffffffff;
-	gdt[1].type = 0x9a;
-	
-	gdt[2].base = 0;
-	gdt[2].limit = 0xffffffff;
-	gdt[2].type = 0x92;
-
-	gdt[3].base = (uintptr_t)&tss;
-	gdt[3].limit = sizeof(tss_t);
-	gdt[3].type = 0x89;
-
-	memset(_gdt, 0, sizeof(uint64_t) * 10);
-	for(i = 0; i < 4; i++) {
-		gdt_encode((uint8_t*)&_gdt[i], gdt[i]);
-	}
-	
-	gdt_desc.base = (uintptr_t)_gdt;
-	gdt_desc.limit = 79;
-
-	void* gdt_addr = &gdt_desc;
-	gdt_reload(gdt_addr);
-}
-
+struct multiboot2_tag_elf_sections*  elf_sections;
 
 // TODO: Clean up this horrible mess. Split function, replace all absolute constants etc. 
 // Also, alot of code here can be made portable with X86_64 with little effort, 
@@ -136,14 +92,9 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 	struct multiboot2_tag_string*        cmdline_tag  = 0;
 	struct multiboot2_tag_basic_meminfo* mem_tag      = 0;
 	struct multiboot2_tag_mmap*          mmap_tag     = 0;
-	struct multiboot2_tag_elf_sections*  elf_sections = 0;
 
 	uintptr_t kernel_start;
 	uintptr_t kernel_end;
-	uintptr_t page_kernel_start;
-	uintptr_t page_kernel_end;
-
-	elf32_shdr_t* shdr;
 	memory_map_t* memory_map;
 	memory_region_t* region;
 	uintptr_t min_size;
@@ -151,15 +102,12 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 	uintptr_t size;
 	uintptr_t tags_end = (uintptr_t)info + info->total_size;
 	uintptr_t offset   = 0;
-	uintptr_t i, j;
-	uintptr_t flags;
 	size_t entry_size;
 	size_t num_entries;
 
+	elf_sections = 0;
 	kernel_start = (uintptr_t)&_kernel_start;
 	kernel_end   = (uintptr_t)&_kernel_end;
-	page_kernel_start = (kernel_start - 0xC0000000) >> PAGE_SHIFT;
-	page_kernel_end   = ((kernel_end   - 0xC0000000) >> PAGE_SHIFT) + 1;
 
 	vga_disable_cursor();
 
@@ -195,7 +143,6 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 		printf("Missing memory map\n");
 		return;
 	}
-	//printf("Basic Memory:\n  Lower = %10uKB\n  Upper = %10uKB\n", mem_tag->mem_lower, mem_tag->mem_upper);
 
 	// Initialize Memory Map
 	entry_size = mmap_tag->entry_size;
@@ -208,10 +155,6 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 		memory_map_add_region(mmap->addr, mmap->len, mmap->type);
 	}
 
-	// Initialize Memory Region
-	// Do the initialization from upper memory.
-	// Only up to 64 MB will be initialized initially. The rest
-	// will be initialized lazily
 	for(memory_map = memory_map_available_begin(); memory_map != memory_map_available_end(); ++memory_map) {
 		if(memory_map->addr >= 0x00100000 && memory_map->type == 1) {
 			// Found candidate
@@ -256,128 +199,9 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 	}
 	memory_region_release();
 
-	uintptr_t  pagedir = (uintptr_t)&boot_pagedir;
-	uintptr_t  pagetb1 = (uintptr_t)&boot_pagetab1;
-	page_t pagedir_page;
-	page_t pagetbx_page;
-
-	if(memory_region_alloc_page(&pagedir_page) != 0) {
-		PANIC("Failed to allocate page for page table directory");
-	}
-	if(memory_region_alloc_page(&pagetbx_page) != 0) {
-		PANIC("Failed to allocate page table");
-	}
-	
-	// Map new page directory to 0xddFFF000 so it fits in the existing
-	// page table
-	offset = pagetb1 + (4 * 1023);
-	*((volatile uintptr_t*)offset) = (pagedir_page << PAGE_SHIFT) | 0x03;
-	
-	// Map page for page table to 0xddFFE000
-	offset = pagetb1 + (4 * 1022);
-	*((volatile uintptr_t*)offset) = (pagetbx_page << PAGE_SHIFT) | 0x03;
-
-	// Map the old page table to 0xFF000000, this
-	// enables access to the page directory at 0xFFFFF000 
-	offset = pagedir + (4 * 1023);
-	*((volatile uintptr_t*)offset) = ((pagetb1 - 0xC0000000) & 0xFFFFF000) | 0x03;
-
-	// Flush changes
-	mm_invlpg(pagedir);
-	mm_invlpg(pagetb1);
-	mm_invlpg(0xFFFFF000);
-	mm_invlpg(0xFFFFE000);
-
-	memset(0xFFFFE000, 0, 4096);
-	memset(0xFFFFF000, 0, 4096);
-
-	// Point last entry of page directory to the page directory itself
-	offset = 0xFFFFF000 + (4 * 1023);
-	*((volatile uintptr_t*)offset) = (pagedir_page << PAGE_SHIFT) | 0x03;
-
-	// Update page directory entry for 0xC0xxxxxx to point
-	// to the new page table
-	*((volatile uintptr_t*)(0xFFFFF000 + 4 * 768)) = (pagetbx_page << PAGE_SHIFT) | 0x03;
-	
-	// Map the kernel into the new page table at 0xFFFFE000,
-	// using ELF sections to determine permissions
-	for(i = 0; i < 1024; i++) {
-		flags = 0;
-		if(i < page_kernel_start) {
-			// Map first 1MB of physical memory to 0xC0000000
-			flags |= 0x03;
-			*((volatile uintptr_t*)(0xFFFFE000 + i * 4)) = (i << PAGE_SHIFT) | flags;
-		}
-		else if(i < page_kernel_end) {
-			// Virtual Address
-			offset = (i << PAGE_SHIFT) + 0xC0000000;
-			for(j = 0; j < elf_sections->num; j++) {
-				shdr = (elf32_shdr_t*)((uintptr_t)elf_sections->sections + elf_sections->entsize * j);
-				if(offset >= shdr->sh_addr && offset < shdr->sh_addr + shdr->sh_size) {
-					if(shdr->sh_flags & SHF_ALLOC) {
-						flags |= 0x01;
-					}
-					if(shdr->sh_flags & SHF_WRITE) {
-						flags |= 0x02;
-					}
-					break;
-				}
-			}			
-			*((volatile uintptr_t*)(0xFFFFE000 + i * 4)) = (i << PAGE_SHIFT) | flags;
-		}
-		else {
-			*((volatile uintptr_t*)(0xFFFFE000 + i * 4)) = 0;
-		}
-	}
-
-	// Write protect the page for the old page directory
-	i = (pagedir - 0xC0000000) >> PAGE_SHIFT;
-	*((volatile uintptr_t*)(0xFFFFE000 + i * 4))  = (i << PAGE_SHIFT) | 0x01;
-
-	// TODO: Fill kernel address space with empty page tables.
-	// All processes should have the kernel in the address space
-	// and updating the address spaces of each process as the kernel
-	// address space changes is complex. Much better to setup empty page
-	// tables, which can be reused in other address spaces, and automatically
-	// get updated everywhere
-
-	// Reload CR3 with new page directory
-	mm_load_cr3(pagedir_page << PAGE_SHIFT);
-
-	paging_init();
+	invoke_initcall_early();
 	memory_region_init();
-
-	// Need to initialize the kernel heap. Simple stuff
-	kernel_heap_start = kernel_end;
-	if(kernel_heap_start % PAGE_SIZE != 0) {
-		kernel_heap_start += PAGE_SIZE - (kernel_heap_start % PAGE_SIZE);
-	}
-	kernel_heap_end = kernel_heap_start;
-	kernel_heap     = kernel_heap_start;
-	kernel_malloc_freelist = 0;
-
-	// Memory Management should be working now. Paging is setup properly
-	// and safely for the kernel, and general purpose memory allocation
-	// (malloc/free) should work.
-
-	//init_ps2();
-
-	_init_gdt();
-	_init_tss();
-	pic_init(0x20, 0x28);
-	irq_init();
-
-	acpi_init(0);
-
-	// rsdp_desc_t* t = acpi_get_rsdp();
-	// if(t != 0) {
-	// 	printf("Found ACPI root system descriptor table\n");
-	// }
-
-	outb(PIC1_DATA, 0xFC);
-	outb(PIC2_DATA, 0xFF);
-
-	asm volatile( "sti" );
+	invoke_initcall_arch();
 
 	kernel_main(cmdline);
 }

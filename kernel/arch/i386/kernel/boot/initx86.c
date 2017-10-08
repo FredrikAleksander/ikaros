@@ -26,27 +26,80 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
+#include <kernel/acpi/acpi.h>
+#include <kernel/boot/gdt.h>
+#include <kernel/boot/idt.h>
+#include <kernel/irq/irq.h>
+#include <kernel/irq/pic.h>
+#include <kernel/scheduler/tss.h>
+#include <kernel/initcall.h>
+#include <string.h>
 
-#ifndef _STRING_H
-#define _STRING_H 1
+tss_t          tss;
+uint64_t       _gdt[10];
+gdt_desc_t     gdt_desc;
 
-#include <sys/cdefs.h>
-
-#include <stddef.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int memcmp(const void*, const void*, size_t);
-void* memcpy(void* __restrict, const void* __restrict, size_t);
-void* memmove(void*, const void*, size_t);
-void* memset(void*, int, size_t);
-size_t strlen(const char*);
-int strcmp(const char*, const char*);
-
-#ifdef __cplusplus
+static void init_tss() {
+	// TODO: Init Task State Segment
 }
-#endif
 
-#endif
+static void init_gdt() {
+	int i;
+	gdt_t gdt[4];
+	
+	// Need to initialize TSS struct before GDT
+	memset(&tss, 0, sizeof(tss_t));
+	tss.ss = 0x10;
+	tss.esp0 = 0; // TODO: Set this to syscall kernel stack base
+	tss.trace = sizeof(tss_t);
+
+	gdt[0].base = 0;
+	gdt[0].limit = 0;
+	gdt[0].type = 0;
+	
+	gdt[1].base = 0;
+	gdt[1].limit = 0xffffffff;
+	gdt[1].type = 0x9a;
+	
+	gdt[2].base = 0;
+	gdt[2].limit = 0xffffffff;
+	gdt[2].type = 0x92;
+
+	gdt[3].base = (uintptr_t)&tss;
+	gdt[3].limit = sizeof(tss_t);
+	gdt[3].type = 0x89;
+
+	memset(_gdt, 0, sizeof(uint64_t) * 10);
+	for(i = 0; i < 4; i++) {
+		gdt_encode((uint8_t*)&_gdt[i], gdt[i]);
+	}
+	
+	gdt_desc.base = (uintptr_t)_gdt;
+	gdt_desc.limit = 79;
+
+	void* gdt_addr = &gdt_desc;
+	gdt_reload(gdt_addr);
+}
+
+
+static int init_x86() {
+	init_gdt();
+	init_tss();
+	pic_init(0x20, 0x28);
+	irq_init();
+	acpi_init(0);
+
+	// rsdp_desc_t* t = acpi_get_rsdp();
+	// if(t != 0) {
+	// 	printf("Found ACPI root system descriptor table\n");
+	// }
+
+	outb(PIC1_DATA, 0xFC);
+	outb(PIC2_DATA, 0xFF);
+
+	asm volatile( "sti" );
+
+	return INIT_OK;
+}
+
+arch_initcall(init_x86);

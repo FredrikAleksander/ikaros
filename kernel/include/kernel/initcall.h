@@ -26,27 +26,53 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
+#ifndef __KERNEL__INITCALL_H
+#define __KERNEL__INITCALL_H 1
 
-#ifndef _STRING_H
-#define _STRING_H 1
+#define INIT_OK   0
+#define INIT_ERR -1
 
-#include <sys/cdefs.h>
+typedef int (*initcall_t)();
 
-#include <stddef.h>
+#define __define_initcall(fn, id) \
+	static initcall_t __initcall_##fn##id __attribute__ ((used)) __attribute__ ((section(".initcall" #id ".init"))) = fn;
+
+#define early_initcall(fn)   __define_initcall(fn, 0)
+#define arch_initcall(fn)    __define_initcall(fn, 1)
+#define bus_initcall(fn)     __define_initcall(fn, 2)
+#define fs_initcall(fn)      __define_initcall(fn, 3)
+#define devices_initcall(fn) __define_initcall(fn, 4)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int memcmp(const void*, const void*, size_t);
-void* memcpy(void* __restrict, const void* __restrict, size_t);
-void* memmove(void*, const void*, size_t);
-void* memset(void*, int, size_t);
-size_t strlen(const char*);
-int strcmp(const char*, const char*);
+void __invoke_initcall0();
+void __invoke_initcall1();
+void __invoke_initcall2();
+void __invoke_initcall3();
+void __invoke_initcall4();
 
 #ifdef __cplusplus
 }
 #endif
+
+
+
+static inline void invoke_initcall_early() {
+	__invoke_initcall0();
+}
+static inline void invoke_initcall_arch() {
+	__invoke_initcall1();
+}
+static inline void invoke_initcall_bus() {
+	__invoke_initcall2();
+}
+static inline void invoke_initcall_fs() {
+	__invoke_initcall3();
+}
+static inline void invoke_initcall_devices() {
+	__invoke_initcall4();
+}
 
 #endif

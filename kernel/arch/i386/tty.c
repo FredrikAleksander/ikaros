@@ -32,8 +32,18 @@ either expressed or implied, of the IKAROS Project.
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <kernel/tty.h>
+#include <kernel/initcall.h>
+
+
+static int test_initcall() {
+	printf("Initcall!\n");
+	return 0;
+}
+
+early_initcall(test_initcall);
 
 #include "vga.h"
 

@@ -38,6 +38,7 @@ either expressed or implied, of the IKAROS Project.
 #include <kernel/ide/ide.h>
 #include <kernel/ide/pci_ide.h>
 #include <kernel/graphics/bochs_vga.h>
+#include <kernel/initcall.h>
 
 int               _ps2_key_counter;
 int               _ps2_key;
@@ -86,29 +87,32 @@ void kernel_idle() {
 	}
 }
 
-void kernel_main(const char* cmdline) {
+void kernel_main(const char * cmdline) {
 	//terminal_initialize();
 #ifndef CONFIG_SILENT
 	printf("\e[44;37;1mIKAROS v0.1\e[K\e[40;37m");
-	//printf("Memory Map: \n");
-	//memory_map_print();
 	printf("Command Line: %s\n", cmdline);
 #endif
 	timer_init();
 	init_ps2();
-	
+
 	scheduler_initialize();
 	// Idle Thread must be present early on, as much driver code uses sleeping,
 	// and there must always be a active task
 	scheduler_create_thread("idle", kernel_idle);
 	scheduler_create_thread("kboot", detect_boot_device);
 	scheduler_create_thread("kash", kash_main);
+
 	pci_init();
+	invoke_initcall_bus();
+	
+	invoke_initcall_fs();
+	
 	ide_init();
 	// Initialize PCI IDE Controller
-	pci_ide_init();
+	//pci_ide_init();
 	//bochs_vga_init();
-
+	invoke_initcall_devices();
 	
 	scheduler_exit(0);
 }

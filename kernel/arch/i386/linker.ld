@@ -23,6 +23,36 @@ SECTIONS
 		*(.bss)
 		*(.bootstrap_stack)
 	}
+	__initcall0_ptrs_start = .;
+	.initcall0.init : AT (ADDR (.initcall0.init) - 0xC0000000)
+	{
+		*(.initcall0.init)
+	}
+	__initcall0_ptrs_end = .;
+	__initcall1_ptrs_start = .;
+	.initcall1.init : AT (ADDR (.initcall1.init) - 0xC0000000)
+	{
+		*(.initcall0.init)
+	}
+	__initcall1_ptrs_end = .;
+	__initcall2_ptrs_start = .;
+	.initcall2.init : AT (ADDR (.initcall2.init) - 0xC0000000)
+	{
+		*(.initcall0.init)
+	}
+	__initcall2_ptrs_end = .;
+	__initcall3_ptrs_start = .;
+	.initcall3.init : AT (ADDR (.initcall3.init) - 0xC0000000)
+	{
+		*(.initcall0.init)
+	}
+	__initcall3_ptrs_end = .;
+	__initcall4_ptrs_start = .;
+	.initcall4.init : AT (ADDR (.initcall4.init) - 0xC0000000)
+	{
+		*(.initcall0.init)
+	}
+	__initcall4_ptrs_end = .;
 	.data ALIGN (4K) : AT (ADDR (.data) - 0xC0000000)
 	{
 		*(.data)

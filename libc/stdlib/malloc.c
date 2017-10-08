@@ -32,6 +32,7 @@ either expressed or implied, of the IKAROS Project.
 #ifdef __is_libk // libk
 #include <kernel/memory/memory_region.h>
 #include <kernel/memory/memory_manager.h>
+#include <kernel/initcall.h>
 #include <kernel/panic.h>
 
 typedef struct _malloc_freelist {
@@ -51,6 +52,22 @@ uintptr_t kernel_heap_start;
 uintptr_t kernel_heap_end;
 uintptr_t kernel_heap;
 void*     kernel_malloc_freelist;
+extern uintptr_t _kernel_end;
+
+static int malloc_init() {
+	uintptr_t kernel_end   = (uintptr_t)&_kernel_end;
+
+	kernel_heap_start = kernel_end;
+	if(kernel_heap_start % PAGE_SIZE != 0) {
+		kernel_heap_start += PAGE_SIZE - (kernel_heap_start % PAGE_SIZE);
+	}
+	kernel_heap_end = kernel_heap_start;
+	kernel_heap     = kernel_heap_start;
+	kernel_malloc_freelist = 0;
+	return INIT_OK;
+}
+
+early_initcall(malloc_init);
 
 // Easy checksum for freelist entries.
 #define COMPUTE_CHECKSUM(x) (((uint32_t)x->next) ^ ((uint32_t)x->size))

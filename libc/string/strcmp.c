@@ -26,27 +26,54 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
+#include <string.h>
 
-#ifndef _STRING_H
-#define _STRING_H 1
+int strcmp(const char * s0, const char * s1) {
+	size_t i = 0;
+	int flag = 0;
+	int c0, c1;
 
-#include <sys/cdefs.h>
+	while(flag == 0) {
+		c0 = s0[i];
+		c1 = s1[i];
 
-#include <stddef.h>
+		if(c0 > c1) {
+			flag = 1;
+		}
+		else if(c0 < c1) {
+			flag = -1;
+		}
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+		if(c0 == '\0') {
+			break;
+		}
 
-int memcmp(const void*, const void*, size_t);
-void* memcpy(void* __restrict, const void* __restrict, size_t);
-void* memmove(void*, const void*, size_t);
-void* memset(void*, int, size_t);
-size_t strlen(const char*);
-int strcmp(const char*, const char*);
-
-#ifdef __cplusplus
+		i++;
+	}
+	return flag;
 }
-#endif
 
-#endif
+int strncmp(const char * s0, const char * s1, size_t max_len) {
+	size_t i = 0;
+	int flag = 0;
+	int c0, c1;
+
+	while(i < max_len && flag == 0) {
+		c0 = s0[i];
+		c1 = s1[i];
+
+		if(c0 > c1) {
+			flag = 1;
+		}
+		else if(c0 < c1) {
+			flag = -1;
+		}
+
+		if(c0 == '\0') {
+			break;
+		}
+
+		i++;
+	}
+	return flag;
+}
