@@ -84,13 +84,11 @@ static void vga_console_redraw(struct console* cons) {
 	
 }
 
-static struct console_operations vga_console_ops = {
+const struct console_operations vga_console_ops = {
 	.redraw = vga_console_redraw
 };
 
 void __init_vga_console(void* vga_memory, int columns, int rows) {
-	vga_console_ops.redraw = vga_console_redraw;
-
 	vga_lock = SPINLOCK_UNLOCKED;
 	console_t* cons = malloc(sizeof(console_t));
 	cursor_column   = 0;

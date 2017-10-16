@@ -32,15 +32,15 @@ either expressed or implied, of the IKAROS Project.
 struct serial_debug_device;
 
 struct serial_debug_driver {
-	void (*install)(struct serial_debug_driver*, struct serial_debug_device*);
-	void (*remove)(struct serial_debug_driver*, struct serial_debug_device*);
+	void (*install)(struct serial_debug_driver const*, struct serial_debug_device*);
+	void (*remove)(struct serial_debug_driver const*, struct serial_debug_device*);
 	void (*putch)(struct serial_debug_device*, char);
 };
 
 struct serial_debug_device {
-	struct serial_debug_device* next;
-	struct serial_debug_driver* driver;
-	void*                       private;
+	struct serial_debug_device*       next;
+	struct serial_debug_driver const* driver;
+	void*                             private;
 };
 
 
@@ -49,7 +49,7 @@ struct serial_debug_device {
 extern "C" {
 #endif
 
-extern void serial_debug_register_driver(struct serial_debug_driver* driver);
+extern void serial_debug_register_driver(struct serial_debug_driver const* driver);
 extern void serial_debug_putch(char ch);
 
 #ifdef __cplusplus

@@ -90,6 +90,7 @@ multiboot_info:
 .section .text
 .global _start
 .global _main
+.global _init
 .type _start, @function
 _start:		
 	mov %eax, (multiboot_info - 0xC0000000)
@@ -181,7 +182,7 @@ _start:
 
 	push (multiboot_info)
 	push $multiboot_info + 8
-	# Enter the high-level kernel.
+	call _init	
 	call _main
 
 	# Infinite loop if the system has nothing more to do.

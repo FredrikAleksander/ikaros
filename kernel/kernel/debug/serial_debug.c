@@ -41,7 +41,7 @@ static int __serial_debug_init(void) {
 
 early_initcall(__serial_debug_init);
 
-void serial_debug_register_driver(struct serial_debug_driver* debug_driver) {
+void serial_debug_register_driver(struct serial_debug_driver const* debug_driver) {
 	struct serial_debug_device* dev = malloc(sizeof(struct serial_debug_device));
 	dev->next = device_head;
 	dev->driver = debug_driver;

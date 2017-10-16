@@ -33,7 +33,7 @@ either expressed or implied, of the IKAROS Project.
 
 #define PORT 0x3f8   /* COM1 */
 
-static void pc_serial_debug_install(struct serial_debug_driver __attribute__((unused)) * driver, 
+static void pc_serial_debug_install(struct serial_debug_driver __attribute__((unused)) const * driver, 
 	struct serial_debug_device __attribute__((unused)) * device)
 {
 	outb_p(PORT + 1, 0x00);    // Disable all interrupts
@@ -45,7 +45,7 @@ static void pc_serial_debug_install(struct serial_debug_driver __attribute__((un
 	outb_p(PORT + 4, 0x0B);    // IRQs enabled, RTS/DSR set
 }
 
-static void pc_serial_debug_remove(struct serial_debug_driver __attribute__((unused)) * driver,
+static void pc_serial_debug_remove(struct serial_debug_driver __attribute__((unused)) const * driver,
 	struct serial_debug_device __attribute__((unused)) * device)
 {
 }
@@ -67,8 +67,7 @@ void __pc_serial_debug_receive(void) {
 	// }
 }
 
-extern struct serial_debug_driver pc_serial_debug_driver;
-struct serial_debug_driver pc_serial_debug_driver = {
+const struct serial_debug_driver pc_serial_debug_driver = {
 	.install = pc_serial_debug_install,
 	.remove = pc_serial_debug_remove,
 	.putch = pc_serial_debug_putch
@@ -77,9 +76,6 @@ struct serial_debug_driver pc_serial_debug_driver = {
 extern int __init_pc_serial_debug(void);
 int __init_pc_serial_debug(void) {
 #ifdef CONFIG_DEBUG_SERIAL
-	pc_serial_debug_driver.install = pc_serial_debug_install;
-	pc_serial_debug_driver.remove = pc_serial_debug_remove;
-	pc_serial_debug_driver.putch = pc_serial_debug_putch;
 	serial_debug_register_driver(&pc_serial_debug_driver);
 #endif
 	return INIT_OK;

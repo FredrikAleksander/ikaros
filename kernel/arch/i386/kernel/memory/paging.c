@@ -138,8 +138,10 @@ static int paging_earlyinit(void) {
 			*((volatile uintptr_t*)(0xFFFFE000 + i * 4)) = (i << PAGE_SHIFT) | flags;
 		}
 		else if(i < page_kernel_end) {
+			(void)shdr;
+			(void)j;
 			// Virtual Address
-			offset = (i << PAGE_SHIFT) + 0xC0000000;
+			/*offset = (i << PAGE_SHIFT) + 0xC0000000;
 			for(j = 0; j < elf_sections->num; j++) {
 				shdr = (elf32_shdr_t*)((uintptr_t)elf_sections->sections + elf_sections->entsize * j);
 				if(offset >= shdr->sh_addr && offset < shdr->sh_addr + shdr->sh_size) {
@@ -147,11 +149,12 @@ static int paging_earlyinit(void) {
 						flags |= 0x01;
 					}
 					if(shdr->sh_flags & SHF_WRITE) {
-						flags |= 0x02;
+						flags |= 0x03;
 					}
 					break;
 				}
-			}			
+			}*/
+			flags = 0x03;
 			*((volatile uintptr_t*)(0xFFFFE000 + i * 4)) = (i << PAGE_SHIFT) | flags;
 		}
 		else {

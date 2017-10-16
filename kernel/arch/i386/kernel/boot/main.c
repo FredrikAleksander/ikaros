@@ -79,9 +79,6 @@ extern struct multiboot2_tag_elf_sections*  elf_sections;
 
 struct multiboot2_tag_elf_sections*  elf_sections;
 
-extern void _init();
-extern void _fini();
-
 extern int __init_pc_serial_debug(void);
 
 // TODO: Clean up this horrible mess. Split function, replace all absolute constants etc. 
@@ -205,8 +202,6 @@ static void _multiboot2_main(struct multiboot_boot_header* info) {
 	}
 	memory_region_release();
 
-	_init();
-
 	invoke_initcall_early();
 	memory_region_init();
 	__init_pc_serial_debug();
@@ -269,8 +264,6 @@ static void _multiboot2_main(struct multiboot_boot_header* info) {
 	}
 	
 	kernel_main(cmdline);
-
-	_fini();
 }
 
 extern void _main(void* mbd, unsigned int magic);

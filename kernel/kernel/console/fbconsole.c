@@ -86,7 +86,7 @@ static void fb_console_draw_glyph(console_framebuffer_t* fb, uint8_t ch, uint16_
 	}
 }
 
-static void fb_console_redraw(console_t* cons) {
+extern void fb_console_redraw(console_t* cons) {
 	uint16_t i,j;
 	uint8_t ch;
 	uint8_t attrs;
@@ -107,8 +107,8 @@ static void fb_console_redraw(console_t* cons) {
 	}
 }
 
-static struct console_operations fb_console_ops = {
-	.redraw = fb_console_redraw
+const struct console_operations fb_console_ops = {
+	fb_console_redraw
 };
 
 static inline int fb_palette_match(struct console_fb_palette* pal, uint8_t color) {
@@ -243,7 +243,6 @@ static int __init_font(void) {
 early_initcall(__init_font);
 
 void __init_fb_console(console_framebuffer_t* fb) {
-	fb_console_ops.redraw = fb_console_redraw;
 	framebuffer = fb;
 	console_t* cons = malloc(sizeof(console_t));
 	memset(cons, 0, sizeof(console_t));

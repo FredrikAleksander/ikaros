@@ -77,7 +77,7 @@ struct console {
 	uint8_t                    escape_code_parameter[32];
 	uint8_t                    escape_code_length;
 	struct console_char*       buffer;
-	struct console_operations* ops;
+	struct console_operations const* ops;
 	void*                      private;
 };
 
