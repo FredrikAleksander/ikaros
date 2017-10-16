@@ -26,14 +26,17 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#include <stdio.h>
-#include <string.h>
+#ifndef __ARCH_I386_KERNEL_DRIVERS_DEBUG__PC_SERIAL_DEBUG_H
+#define __ARCH_I386_KERNEL_DRIVERS_DEBUG__PC_SERIAL_DEBUG_H 1
 
-int printf(const char* ____restrict format, ...) {
-	va_list parameters;
-	int     written;
-	va_start(parameters, format);
-	written = vprintf(format, parameters);
-	va_end(parameters);
-	return written;
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern void __pc_serial_debug_receive(void);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif

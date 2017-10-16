@@ -32,10 +32,10 @@ either expressed or implied, of the IKAROS Project.
 #include <stdio.h>
 #include <sys/elf32.h>
 
-uintptr_t __initcall0_ptrs_start;
-uintptr_t __initcall0_ptrs_end;
+extern uintptr_t __initcall0_ptrs_start;
+extern uintptr_t __initcall0_ptrs_end;
 
-void __invoke_initcall0() { 
+void __invoke_initcall0(void) { 
 	initcall_t* initcall_start = (initcall_t*)&__initcall0_ptrs_start; 
 	initcall_t* initcall_end = (initcall_t*)&__initcall0_ptrs_end; 
 	while(initcall_start != initcall_end) { 
@@ -44,10 +44,10 @@ void __invoke_initcall0() {
 	} 
 }
 
-uintptr_t __initcall1_ptrs_start;
-uintptr_t __initcall1_ptrs_end;
+extern uintptr_t __initcall1_ptrs_start;
+extern uintptr_t __initcall1_ptrs_end;
 
-void __invoke_initcall1() { 
+void __invoke_initcall1(void) { 
 	initcall_t* initcall_start = (initcall_t*)&__initcall1_ptrs_start; 
 	initcall_t* initcall_end = (initcall_t*)&__initcall1_ptrs_end; 
 	while(initcall_start != initcall_end) { 
@@ -56,10 +56,10 @@ void __invoke_initcall1() {
 	} 
 }
 
-uintptr_t __initcall2_ptrs_start;
-uintptr_t __initcall2_ptrs_end;
+extern uintptr_t __initcall2_ptrs_start;
+extern uintptr_t __initcall2_ptrs_end;
 
-void __invoke_initcall2() { 
+void __invoke_initcall2(void) { 
 	initcall_t* initcall_start = (initcall_t*)&__initcall2_ptrs_start; 
 	initcall_t* initcall_end = (initcall_t*)&__initcall2_ptrs_end; 
 	while(initcall_start != initcall_end) { 
@@ -68,10 +68,10 @@ void __invoke_initcall2() {
 	} 
 }
 
-uintptr_t __initcall3_ptrs_start;
-uintptr_t __initcall3_ptrs_end;
+extern uintptr_t __initcall3_ptrs_start;
+extern uintptr_t __initcall3_ptrs_end;
 
-void __invoke_initcall3() { 
+void __invoke_initcall3(void) { 
 	initcall_t* initcall_start = (initcall_t*)&__initcall3_ptrs_start; 
 	initcall_t* initcall_end = (initcall_t*)&__initcall3_ptrs_end; 
 	while(initcall_start != initcall_end) { 
@@ -80,10 +80,10 @@ void __invoke_initcall3() {
 	} 
 }
 
-uintptr_t __initcall4_ptrs_start;
-uintptr_t __initcall4_ptrs_end;
+extern uintptr_t __initcall4_ptrs_start;
+extern uintptr_t __initcall4_ptrs_end;
 
-void __invoke_initcall4() { 
+void __invoke_initcall4(void) { 
 	initcall_t* initcall_start = (initcall_t*)&__initcall4_ptrs_start; 
 	initcall_t* initcall_end = (initcall_t*)&__initcall4_ptrs_end; 
 	while(initcall_start != initcall_end) { 

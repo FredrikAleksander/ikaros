@@ -33,24 +33,26 @@ either expressed or implied, of the IKAROS Project.
 #include <kernel/irq/pic.h>
 #include <kernel/scheduler/tss.h>
 #include <kernel/initcall.h>
+#include <kernel/delay.h>
 #include <string.h>
+#include <stdio.h>
 
-tss_t          tss;
-uint64_t       _gdt[10];
-gdt_desc_t     gdt_desc;
+static tss_t          tss;
+static uint64_t       _gdt[10];
+static gdt_desc_t     gdt_desc;
 
-static void init_tss() {
+static void init_tss(void) {
 	// TODO: Init Task State Segment
 }
 
-static void init_gdt() {
+static void init_gdt(void) {
 	int i;
 	gdt_t gdt[4];
 	
 	// Need to initialize TSS struct before GDT
 	memset(&tss, 0, sizeof(tss_t));
 	tss.ss = 0x10;
-	tss.esp0 = 0; // TODO: Set this to syscall kernel stack base
+	tss.esp0 = NULL; // TODO: Set this to syscall kernel stack base
 	tss.trace = sizeof(tss_t);
 
 	gdt[0].base = 0;
@@ -81,19 +83,60 @@ static void init_gdt() {
 	gdt_reload(gdt_addr);
 }
 
+extern void acpi_early_init(void);
 
-static int init_x86() {
+static int init_x86(void) {
 	init_gdt();
 	init_tss();
 	pic_init(0x20, 0x28);
 	irq_init();
-	acpi_init(0);
+	acpi_early_init();
+	timer_init();
 
-	// rsdp_desc_t* t = acpi_get_rsdp();
-	// if(t != 0) {
-	// 	printf("Found ACPI root system descriptor table\n");
-	// }
+	outb(PIC1_DATA, 0xFE);
+	outb(PIC2_DATA, 0xFF);
+	asm volatile( "sti" );
 
+	// Delay loop calibration. Uses the Linux BogoMIPS method.
+	// TODO: Alot of modern hardware has much better ways to
+	// achieve sub-millisecond timing and delays.
+	// Should support modern and more advanced timing methods,
+	// such as:
+	//	Invariant TSC
+	//  Processor Frequency + RDTSC ( needs more ACPI stuff :S )
+	//  HPET
+	unsigned long ticks;
+	unsigned long loopbit;
+	int lps_precision = 8;
+
+	loops_per_jiffy = (1<<12);
+	while ((loops_per_jiffy <<= 1) != 0) {
+		/* wait for "start of" clock tick */
+		ticks = jiffies;
+		while (ticks == jiffies)
+			/* nothing */;
+		/* Go .. */
+		ticks = jiffies;
+		__delay(loops_per_jiffy);
+		ticks = jiffies - ticks;
+		if (ticks)
+			break;
+	}
+
+	loops_per_jiffy >>= 1;
+	loopbit = loops_per_jiffy;
+	while (lps_precision-- && (loopbit >>= 1)) {
+		loops_per_jiffy |= loopbit;
+		ticks = jiffies;
+		while (ticks == jiffies)
+			/* nothing */;
+		ticks = jiffies;
+		__delay(loops_per_jiffy);
+		if (jiffies != ticks)   /* longer than 1 tick */
+			loops_per_jiffy &= ~loopbit;
+	}
+	asm volatile( "cli" );
+	
 	outb(PIC1_DATA, 0xFC);
 	outb(PIC2_DATA, 0xFF);
 

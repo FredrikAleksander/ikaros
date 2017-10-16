@@ -28,14 +28,15 @@ either expressed or implied, of the IKAROS Project.
 */
 #include <kernel/scheduler/wait.h>
 #include <kernel/scheduler/scheduler.h>
+#include <stddef.h>
 
 void wait_queue_init(wait_queue_head_t* queue) {
-	queue->next = 0;
+	queue->next = NULL;
 	queue->lock = SPINLOCK_UNLOCKED;
 }
 
 void wait_init(wait_queue_t* wq) {
-	wq->next = 0;
+	wq->next = NULL;
 	wq->task = running_task;
 }
 
@@ -64,12 +65,12 @@ void wait_remove_from_queue(wait_queue_head_t* queue, wait_queue_t* wq) {
 	wait_queue_t* prev;
 	wait_queue_t* curr;
 
-	prev = 0;
+	prev = NULL;
 	curr = queue->next;
 
-	while(curr != 0) {
+	while(curr != NULL) {
 		if(curr == wq) {
-			if(prev != 0) {
+			if(prev != NULL) {
 				prev->next = curr->next;
 			}
 			else {
@@ -84,7 +85,7 @@ void wait_wake_up_interruptible(wait_queue_head_t* queue) {
 	unsigned long flags;
 	spinlock_acquire_irqsave(&queue->lock, &flags);
 	wait_queue_t* wq = queue->next;
-	while(wq != 0) {
+	while(wq != NULL) {
 		task_set_state(wq->task, TASK_RUNNING);
 		queue->next = wq->next;
 		wq = queue->next;

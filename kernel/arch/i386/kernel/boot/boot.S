@@ -48,7 +48,17 @@ multiboot_header:
 	.long	multiboot_header_end - multiboot_header
 	/* checksum */
 	.long -(MULTIBOOT2_HEADER_MAGIC + MULTIBOOT2_ARCHITECTURE_I386 + (multiboot_header_end - multiboot_header))
-	.short MULTIBOOT2_HEADER_TAG_END
+	/*.short MULTIBOOT2_HEADER_TAG_END*/
+
+	/* Framebuffer Tag */
+	.short 5
+	.short 0
+	.long 20
+	.long 0 
+	.long 0 
+	.long 32
+
+	/* Termination Tag */
 	.short 0
 	.long 8
 multiboot_header_end:
@@ -93,8 +103,6 @@ _start:
 	mov %ebx, %esi
 	cld
 	rep movsb
-
-	# First Memory Region Should Be 0 - 0x0009fc00
 
 	# Physical address of boot_pagetab1.
 	# TODO: I recall seeing some assembly that used a macro to do the
@@ -194,3 +202,4 @@ _start:
    MOV   GS, AX
    MOV   SS, AX
    RET*/
+   

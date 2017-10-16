@@ -43,13 +43,13 @@ typedef struct _memory_map {
 	uint32_t type;
 } memory_map_t;
 
-void 		  memory_map_initialize();
+void 		  memory_map_initialize(void);
 void          memory_map_add_region(uintptr_t addr, uintptr_t size, uint32_t type);
-memory_map_t* memory_map_begin();
-memory_map_t* memory_map_end();
-memory_map_t* memory_map_available_begin();
-memory_map_t* memory_map_available_end();
-void          memory_map_print();
-void          memory_map_available_print();
+memory_map_t* memory_map_begin(void);
+memory_map_t* memory_map_end(void);
+memory_map_t* memory_map_available_begin(void);
+memory_map_t* memory_map_available_end(void);
+void          memory_map_print(void);
+void          memory_map_available_print(void);
 
 #endif

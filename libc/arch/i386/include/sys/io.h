@@ -115,7 +115,7 @@ static inline void outsl(uint16_t port, const void* target, uintptr_t len) {
 	asm volatile("cld; rep; outsl" : "=S"(target), "=c"(len) : "d"(port), "0"(target), "1"(len));
 }
  
-static inline void io_wait() {
+static inline void io_wait(void) {
 	asm volatile ("outb %%al, $0x80" : : "a"(0));
 }
 

@@ -30,7 +30,7 @@ either expressed or implied, of the IKAROS Project.
 #include <stdlib.h>
 #include <string.h>
 
-task_t* task_wrap() {
+task_t* task_wrap(void) {
 	task_t* task = malloc(sizeof(task_t));
 	memset(task, 0, sizeof(task_t));
 	asm volatile("movl %%cr3, %%eax; movl %%eax, %0;":"=m"(task->regs.cr3)::"%eax");
@@ -52,7 +52,7 @@ task_t* task_inherit(const char* name, task_entry_point entry_point, void* stack
     task->regs.edi = 0;
     task->regs.eip = (uint32_t) entry_point;
     task->regs.esp = (uint32_t) stack;
-	task->next = 0;
+	task->next = NULL;
 	task->name = name;
 	task->state = TASK_RUNNING;
 	return task;
@@ -70,7 +70,7 @@ task_t* task_create(const char* name, task_entry_point entry_point, uint32_t efl
     task->regs.eip = (uint32_t) entry_point;
     task->regs.cr3 = (uint32_t) page_dir;
     task->regs.esp = (uint32_t) stack;
-	task->next = 0;
+	task->next = NULL;
 	task->name = name;
 	task->state = TASK_RUNNING;
 	return task;
@@ -83,3 +83,4 @@ void task_set_state(task_t* task, task_state_t state) {
 int task_signal_pending(task_t __attribute__ ((unused)) * task) {
 	return 0;
 }
+

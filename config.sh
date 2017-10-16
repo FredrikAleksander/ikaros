@@ -10,6 +10,7 @@ export HOST_CC=cc
 
 export AR=${TARGET}-ar
 export AS=${TARGET}-as
+export REAL_CC=${TARGET}-gcc
 export CC=${TARGET}-gcc
 
 export PREFIX=/usr
@@ -18,7 +19,7 @@ export BOOTDIR=/boot
 export LIBDIR=$EXEC_PREFIX/lib
 export INCLUDEDIR=$PREFIX/include
 
-export CFLAGS='-O2 -g'
+export CFLAGS='-g'
 export CPPFLAGS=''
 
 # Configure the cross-compiler to use the desired system root.

@@ -31,7 +31,7 @@ either expressed or implied, of the IKAROS Project.
 #include <stdlib.h>
 #include <stdio.h>
 
-void bochs_vga_init() {
+void bochs_vga_init(void) {
 	bochs_vga_device_t* dev;
 	pci_device_t*   pci_device;
 	pci_function_t* pci_function;

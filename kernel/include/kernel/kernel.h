@@ -26,17 +26,14 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-
-#ifndef __ARCH_I386_KERNEL_IDE__PCI_IDE_H
-#define __ARCH_I386_KERNEL_IDE__PCI_IDE_H 1
-
-#include <kernel/ide/ide.h>
+#ifndef __KERNEL__KERNEL_H
+#define __KERNEL__KERNEL_H 1
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void pci_ide_init();
+extern void kernel_main(const char* command_line);
 
 #ifdef __cplusplus
 }

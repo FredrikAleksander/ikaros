@@ -26,14 +26,20 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#include <kernel/memory/mmio.h>
+#ifndef __KERNEL_FS__FS_H
+#define __KERNEL_FS__FS_H 1
 
-void mmio_init() {
-}
+#include <stdint.h>
+#include <stddef.h>
 
-void* mmio_map(void __attribute__((unused)) * phys_addr, size_t __attribute__((unused)) size) {
-	return NULL;
-}
+struct file;
+struct file_operations;
+typedef struct file     file_t;
+typedef struct file_ops file_operations_t;
 
-void  mmio_unmap(void __attribute__((unused)) * phys_addr, size_t __attribute__((unused)) size) {
-}
+struct file {
+	const file_operations_t* file_ops;
+	void*                    private_data;
+};
+
+#endif

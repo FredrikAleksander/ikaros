@@ -26,54 +26,42 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
+#include <kernel/delay.h>
 
-#ifndef __KERNEL_IDE__IDE_H
-#define __KERNEL_IDE__IDE_H 1
+extern inline void __delay(unsigned long loops)
+{
+	asm volatile(
+		"test %0,%0\n"
+		"jz 3f\n"
+		"jmp 1f\n"
 
-#include <kernel/ata/ata.h>
-#include <stdint.h>
+		".align 16\n"
+		"1: jmp 2f\n"
 
-typedef struct ide_controller ide_controller_t;
+		".align 16\n"
+		"2: dec %0\n"
+		" jnz 2b\n"
+		"3: dec %0\n"
 
-typedef uint8_t (*ide_read_fn) (ide_controller_t* controller, uint8_t channel, uint8_t reg);
-typedef uint8_t (*ide_read_buffer_fn) (ide_controller_t* controller, uint8_t channel, uint8_t reg, uint32_t* buffer, uint32_t size);
-typedef void    (*ide_write_fn)(ide_controller_t* controller, uint8_t channel, uint8_t reg, uint8_t data);
-
-struct ide_controller_ops {
-	ide_read_fn  read;
-	ide_write_fn write;
-	ide_read_buffer_fn read_buffer;
-};
-
-struct ide_controller {
-	struct ide_controller*    prev;
-	struct ide_controller*    next;
-	struct ide_controller_ops ops;
-};
-
-typedef struct ide_device {
-	uint8_t reserved;
-	uint8_t channel;
-	uint8_t drive;
-	uint16_t type;
-	uint16_t signature;
-	uint32_t command_sets;
-	uint32_t size;
-	char     model[41];
-} ide_device_t;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void              ide_init();
-void              ide_add_controller(ide_controller_t* controller);
-void              ide_del_controller(ide_controller_t* controller);
-ide_controller_t* ide_enumerate_controllers(ide_controller_t* current);
-ide_device_t*     ide_enumerate_devices(ide_device_t* current);
-
-#ifdef __cplusplus
+		: /* we don't need output */
+		: "a" (loops)
+	);
 }
-#endif
 
-#endif
+extern inline void __const_udelay(unsigned long xloops)
+{
+	int d0;
+
+	xloops *= 4;
+	asm("mull %%edx"
+		: "=d" (xloops), "=&a" (d0)
+		: "1" (xloops), "0"
+		(loops_per_jiffy * (HZ/4)));
+
+	__delay(++xloops);
+}
+
+extern inline void udelay(unsigned long usecs)
+{
+	__const_udelay(usecs * 0x000010c7); /* 2**32 / 1000000 (rounded up) */
+}

@@ -30,27 +30,6 @@ either expressed or implied, of the IKAROS Project.
 #include <stdio.h>
 #include <stdlib.h>
 
-const char* pci_class_names[] = {
-	"Unknown",
-	"Mass Storage Controller",
-	"Network Controller",
-	"Display Controller",
-	"Multimedia Controller",
-	"Memory Controller",
-	"Bridge Device",
-	"Simple Communication Controller",
-	"Base System Peripheral",
-	"Input Device",
-	"Docking Station",
-	"Processor",
-	"Serial Bus Controller",
-	"Wireless Controller",
-	"Intelligent I/O",
-	"Satellite Communications Controller",
-	"Cryptography Controller",
-	"Data Acquisition and Signal Processing Controller",
-};
-
 static inline const char* pci_get_class_name(uint8_t class_code, uint8_t subclass, uint8_t progif) {
 	switch(class_code) {
 		case PCI_CLASS_UNKNOWN:
@@ -403,10 +382,10 @@ static inline const char* pci_get_class_name(uint8_t class_code, uint8_t subclas
 	return "Undefined";
 }
 
-size_t        pci_device_count;
-pci_device_t* pci_devices;
+static size_t        pci_device_count;
+static pci_device_t* pci_devices;
 
-void pci_scan_bus(uint8_t bus);
+static void pci_scan_bus(uint8_t bus);
 
 static inline void pci_scan_device_function(pci_device_t* dev, uint8_t function) {
 	uint32_t tmp;
@@ -495,7 +474,7 @@ static inline void pci_scan_device(uint8_t bus, uint8_t device) {
 
 	prev = NULL;
 	curr = pci_devices;
-	while(curr != 0) {
+	while(curr != NULL) {
 		prev = curr;
 		curr = curr->next;
 	}
@@ -510,7 +489,7 @@ static inline void pci_scan_device(uint8_t bus, uint8_t device) {
 	pci_device_count++;
 }
 
-void pci_scan_bus(uint8_t bus) {
+static void pci_scan_bus(uint8_t bus) {
 	uint8_t device;
 
 	for(device = 0; device < 32; device++) {
@@ -518,7 +497,7 @@ void pci_scan_bus(uint8_t bus) {
 	}
 }
 
-static inline void pci_scan() {
+static inline void pci_scan(void) {
 	uint8_t function;
 	uint8_t header_type;
 
@@ -538,7 +517,7 @@ static inline void pci_scan() {
 	}
 }
 
-void pci_init() {
+void pci_init(void) {
 	pci_device_t*   dev;
 	pci_function_t* func;
 	pci_devices = NULL;

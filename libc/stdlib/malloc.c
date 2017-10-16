@@ -30,10 +30,12 @@ either expressed or implied, of the IKAROS Project.
 #include <stdlib.h>
 #include <stdio.h>
 #ifdef __is_libk // libk
+#include <kernel/compiler.h>
 #include <kernel/memory/memory_region.h>
 #include <kernel/memory/memory_manager.h>
 #include <kernel/initcall.h>
 #include <kernel/panic.h>
+#include <kernel/scheduler/scheduler.h>
 
 typedef struct _malloc_freelist {
 	struct _malloc_freelist* next;
@@ -48,13 +50,15 @@ typedef struct _malloc_freelist {
 #endif
 } malloc_freelist_t;
 
-uintptr_t kernel_heap_start;
-uintptr_t kernel_heap_end;
-uintptr_t kernel_heap;
-void*     kernel_malloc_freelist;
+static uintptr_t kernel_heap_start;
+static uintptr_t kernel_heap_end;
+static uintptr_t kernel_heap;
+static void*     kernel_malloc_freelist;
 extern uintptr_t _kernel_end;
+static spinlock_t heap_lock;
+static spinlock_t freelist_lock;
 
-static int malloc_init() {
+static int malloc_init(void) {
 	uintptr_t kernel_end   = (uintptr_t)&_kernel_end;
 
 	kernel_heap_start = kernel_end;
@@ -63,7 +67,8 @@ static int malloc_init() {
 	}
 	kernel_heap_end = kernel_heap_start;
 	kernel_heap     = kernel_heap_start;
-	kernel_malloc_freelist = 0;
+	kernel_malloc_freelist = NULL;
+	heap_lock = SPINLOCK_UNLOCKED;
 	return INIT_OK;
 }
 
@@ -72,7 +77,7 @@ early_initcall(malloc_init);
 // Easy checksum for freelist entries.
 #define COMPUTE_CHECKSUM(x) (((uint32_t)x->next) ^ ((uint32_t)x->size))
 
-static inline int heap_grow() {
+static inline int __must_hold(heap_lock) heap_grow(void) {
 	// Allocate a page, and map it to virtual memory starting at kernel_heap_end
 	page_t page;
 	int    err;
@@ -85,25 +90,26 @@ static inline int heap_grow() {
 	return 0;
 }
 
-static inline void freelist_acquire() {
-	// TODO: Spinlock acquire
+static inline void freelist_acquire(unsigned long* flags) {
+	spinlock_acquire_irqsave(&freelist_lock, flags);
 }
 
-static inline void freelist_release() {
-	// TODO: Spinlock release
+static inline void freelist_release(unsigned long* flags) {
+	spinlock_release_irqload(&freelist_lock, flags);
 }
 
-static inline void heap_acquire() {
-	// TODO: Spinlock acquire
+static inline void heap_acquire(unsigned long* flags) {
+	spinlock_acquire_irqsave(&heap_lock, flags);
 }
 
-static inline void heap_release() {
-	// TODO: Spinlock release
+static inline void heap_release(unsigned long* flags) {
+	spinlock_release_irqload(&heap_lock, flags);
 }
 
 #define MALLOC_ALIGN_BYTES 16
 
 void* malloc(size_t num_bytes) {
+	unsigned long flags;
 	uintptr_t size;
 	uintptr_t header_size = sizeof(malloc_freelist_t);
 	uintptr_t num_bytes_aligned;
@@ -112,7 +118,7 @@ void* malloc(size_t num_bytes) {
 	malloc_freelist_t* freelist;
 	malloc_freelist_t* freelist_next;
 
-	freelist_prev = 0;
+	freelist_prev = NULL;
 	freelist = kernel_malloc_freelist;
 
 	if(header_size % MALLOC_ALIGN_BYTES != 0) {
@@ -125,8 +131,8 @@ void* malloc(size_t num_bytes) {
 	}
 
 	// If possible, reuse existing memory
-	freelist_acquire();
-	while(freelist != 0) {
+	freelist_acquire(&flags);
+	while(freelist != NULL) {
 		size = freelist->size ^ 0xF;
 		if(size >= num_bytes_aligned) {
 			// Found a free block with available space
@@ -140,45 +146,45 @@ void* malloc(size_t num_bytes) {
 #ifdef CONFIG_DEBUG_MALLOC
 				freelist->checksum = COMPUTE_CHECKSUM(freelist);
 #endif
-				if(freelist_prev != 0) {
+				if(freelist_prev != NULL) {
 					freelist_prev->next = freelist_next;
 				}
 				else {
 					kernel_malloc_freelist = freelist_next;
 				}
-				freelist_release();
+				freelist_release(&flags);
 				return ((char*)freelist) + header_size;
 			}
 			else {
-				if(freelist_prev != 0) {
+				if(freelist_prev != NULL) {
 					freelist_prev->next = freelist->next;
 				}
 				freelist->size = num_bytes_aligned;
 #ifdef CONFIG_DEBUG_MALLOC
 				freelist->checksum = COMPUTE_CHECKSUM(freelist);
 #endif
-				freelist_release();
+				freelist_release(&flags);
 				return ((char*)freelist) + header_size;
 			}
 		}
 		freelist_prev = freelist;
 		freelist = freelist->next;
 	}
-	freelist_release();
+	freelist_release(&flags);
 
 	// Need to get memory from the heap
 	size = header_size + num_bytes_aligned;
-	heap_acquire();
+	heap_acquire(&flags);
 	while(kernel_heap_end - kernel_heap < size) {
 		if(heap_grow() != 0) {
-			heap_release();
-			return 0;
+			heap_release(&flags);
+			return NULL;
 		}
 	}
 	freelist = (malloc_freelist_t*)kernel_heap;
 	kernel_heap += size;
-	heap_release();
-	freelist->next = 0;
+	heap_release(&flags);
+	freelist->next = NULL;
 	freelist->size = num_bytes_aligned;
 #ifdef CONFIG_DEBUG_MALLOC
 	freelist->checksum = COMPUTE_CHECKSUM(freelist);
@@ -191,6 +197,7 @@ void* malloc(size_t num_bytes) {
 // heuristic that gets updated based on previous runs, generating a error 
 // correcting cycle for constantly improving the compaction rate.
 void free(void* mem) {
+	unsigned long lflags;
 	malloc_freelist_t* prev;
 	malloc_freelist_t* other;
 	malloc_freelist_t* other_end;
@@ -211,29 +218,29 @@ void free(void* mem) {
 		// TODO: For memory mapped files in the future
 		return;
 	}
-	freelist_acquire();
-	prev  = 0;
+	freelist_acquire(&lflags);
+	prev  = NULL;
 	other = kernel_malloc_freelist;
 
-	while(other != 0) {
+	while(other != NULL) {
 		freelist_end = (malloc_freelist_t*)(((char*)freelist) + freelist->size + header_size);
 		other_end    = (malloc_freelist_t*)(((char*)other) + other->size + header_size);
 
 		if(freelist_end == other) {
 			freelist->size += header_size + other->size;
 			freelist->next = other->next;
-			if(prev == 0) {
+			if(prev == NULL) {
 				kernel_malloc_freelist = freelist;
 			}
 			else {
 				prev->next = freelist;
 			}
-			freelist_release();
+			freelist_release(&lflags);
 			return; // TODO: Repeat process
 		}
 		else if(freelist == other_end) {
 			other->size += header_size + freelist->size;
-			freelist_release();
+			freelist_release(&lflags);
 			return;
 		}
 
@@ -243,13 +250,13 @@ void free(void* mem) {
 	
 	freelist->next = kernel_malloc_freelist;
 	kernel_malloc_freelist = freelist;
-	freelist_release();
+	freelist_release(&lflags);
 }
 
 #else // libc
 
 void* malloc(size_t __attribute__((unused)) num_bytes) {
-	return 0;
+	return NULL;
 }
 
 void free(void* __attribute__((unused)) mem) {

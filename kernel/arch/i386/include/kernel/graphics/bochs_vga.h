@@ -75,7 +75,7 @@ typedef struct bochs_vga_device {
 extern "C" {
 #endif __cplusplus
 
-void bochs_vga_init();
+void bochs_vga_init(void);
 void bochs_vga_enable_vbe(bochs_vga_device_t* vga_device);
 void bochs_vga_disable_vbe(bochs_vga_device_t* vga_device);
 void bochs_vga_set_xres(bochs_vga_device_t* vga_device, uint16_t xres);

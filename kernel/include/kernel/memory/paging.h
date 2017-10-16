@@ -33,7 +33,7 @@ either expressed or implied, of the IKAROS Project.
 extern "C" {
 #endif
 
-void paging_init();
+void paging_init(void);
 
 #ifdef __cplusplus
 }

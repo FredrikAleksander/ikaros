@@ -26,15 +26,19 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#ifndef __ARCH_I386__RDTSC_H
-#define __ARCH_I386__RDTSC_H
+#ifndef __ARCH_I386_KERNEL_DRIVERS_CONSOLE__VGA_CONSOLE_H
+#define __ARCH_I386_KERNEL_DRIVERS_CONSOLE__VGA_CONSOLE_H 1
 
-#include <stdint.h>
+#include <kernel/console/console.h>
 
-static inline uint64_t rdtsc() {
-	uint64_t ret;
-	asm volatile("rdtsc" : "=A"(ret));
-	return ret;
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern void __init_vga_console(void* vga_memory, int columns, int rows);
+
+#ifdef __cplusplus
 }
+#endif
 
 #endif

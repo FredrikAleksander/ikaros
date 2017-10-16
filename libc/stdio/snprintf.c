@@ -426,7 +426,7 @@ static void fmtstr(printch_t printch, char *buffer, size_t *currlen, size_t maxl
 	int padlen, strln;     /* amount to pad */
 	int cnt = 0;
 
-	if (value == 0) {
+	if (value == NULL) {
 		value = "<NULL>";
 	}
 
@@ -761,18 +761,22 @@ static void dopr_outch(char *buffer, size_t *currlen, size_t maxlen, char c)
 	(*currlen)++;
 }
 
-static void dopr_putch(char* buffer, size_t* currlen, size_t maxlen, char c) {
-	(void)buffer;
-	if (*currlen < maxlen) {
-		putchar(c);
-	}
-	(*currlen)++;
-}
+// static void dopr_putch(char* buffer, size_t* currlen, size_t maxlen, char c) {
+// 	(void)buffer;
+// 	if (*currlen < maxlen) {
+// 		putchar(c);
+// 	}
+// 	(*currlen)++;
+// }
 
-static char dummy_data[] = { 6, 6, 6};
+//static char dummy_data[] = { 6, 6, 6};
 
 int vprintf(const char* __restrict fmt, va_list args) {
-	return dopr(dopr_putch, dummy_data, 1<<30, fmt, args);
+	//return dopr(dopr_putch, dummy_data, 1<<30, fmt, args);
+	char buffer[256];
+	int x = dopr(dopr_outch, buffer, 256, fmt, args);
+	puts(buffer);
+	return x;
 }
 
 int printf(const char* __restrict fmt, ...) {

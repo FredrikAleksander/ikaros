@@ -32,13 +32,14 @@ either expressed or implied, of the IKAROS Project.
 #include <kernel/memory/memory_region.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
-static inline void mm_invlpg(uintptr_t addr) {
+static inline void mm_invlpg(void* addr) {
     /* Clobber memory to avoid optimizer re-ordering access before invlpg, which may cause nasty bugs. */
     asm volatile ("invlpg (%0)" : : "b"(addr) : "memory" );
 }
 
-static inline void mm_load_cr3(uintptr_t addr) {
+static inline void mm_load_cr3(void* addr) {
 	asm volatile ("mov %0, %%eax; mov %%eax, %%cr3" : : "r"(addr) : "%eax");
 }
 
@@ -78,7 +79,7 @@ static inline void mm_map_page(void* paddr, void* vaddr, uint32_t flags) {
 		printf("Address already mapped: Page 0x%08x\n", (unsigned)(pt[ptindex]));
 	}
 	pt[ptindex] = ((uintptr_t)paddr) | (flags & 0xFFF) | 0x01;
-	mm_invlpg((uintptr_t)vaddr);
+	mm_invlpg(vaddr);
 }
 
 #endif

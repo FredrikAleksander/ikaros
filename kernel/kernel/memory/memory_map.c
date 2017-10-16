@@ -38,7 +38,7 @@ either expressed or implied, of the IKAROS Project.
  static memory_map_t _memory_map_available[MAX_MEMORY_MAP_SIZE];
  static size_t       _memory_map_available_size;
 
- void memory_map_initialize() {
+ void memory_map_initialize(void) {
 	 _memory_map_size = 0;
 	 _memory_map_available_size = 0;
  }
@@ -65,19 +65,19 @@ either expressed or implied, of the IKAROS Project.
 	}
  }
 
-memory_map_t* memory_map_begin() {
+memory_map_t* memory_map_begin(void) {
 	 return _memory_map;
 }
 
-memory_map_t* memory_map_end() {
+memory_map_t* memory_map_end(void) {
 	 return &_memory_map[_memory_map_size];
 }
 
-memory_map_t* memory_map_available_begin() {
+memory_map_t* memory_map_available_begin(void) {
 	return _memory_map_available;
 }
 
- memory_map_t* memory_map_available_end() {
+ memory_map_t* memory_map_available_end(void) {
 	 return &_memory_map_available[_memory_map_available_size];
  }
 
@@ -96,14 +96,14 @@ memory_map_t* memory_map_available_begin() {
 	 }
  }
 
-void memory_map_print() {
+void memory_map_print(void) {
 	memory_map_t* tmmap;
 	for(tmmap = memory_map_begin(); tmmap != memory_map_end(); ++tmmap) {
 		printf("0x%08x - 0x%08x %s\n", (unsigned)tmmap->addr, (unsigned)tmmap->length, _memory_map_type_str(tmmap->type));
 	}
  }
 
-void memory_map_available_print() {
+void memory_map_available_print(void) {
 	memory_map_t* tmmap;
 	for(tmmap = memory_map_available_begin(); tmmap != memory_map_available_end(); ++tmmap) {
 		printf("0x%08x - 0x%08x %s\n", (unsigned)tmmap->addr, (unsigned)tmmap->length, _memory_map_type_str(tmmap->type));

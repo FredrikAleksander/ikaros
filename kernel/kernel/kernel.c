@@ -28,59 +28,61 @@ either expressed or implied, of the IKAROS Project.
 */
 
 #include <stdio.h>
+#include <kernel/kernel.h>
+#include <kernel/acpi/acpi.h>
 #include <kernel/panic.h>
 #include <kernel/memory/memory_map.h>
 #include <kernel/scheduler/scheduler.h>
 #include <kernel/scheduler/wait.h>
 #include <kernel/irq/timer.h>
-#include <kernel/tty.h>
 #include <kernel/pci/pci.h>
-#include <kernel/ide/ide.h>
-#include <kernel/ide/pci_ide.h>
 #include <kernel/graphics/bochs_vga.h>
 #include <kernel/initcall.h>
+#include <kernel/input/keyboard.h>
+#include <kernel/console/console.h>
+#include <sys/unicode.h>
 
-int               _ps2_key_counter;
-int               _ps2_key;
-wait_queue_head_t _ps2_queue;
-char              _ps2_buffer[16];
-int               _ps2_codelen;
+// static int               _ps2_key_counter;
+// static int               _ps2_key;
+// static wait_queue_head_t _ps2_queue;
+// //static char              _ps2_buffer[16];
+// static int               _ps2_codelen;
 
-void init_ps2() {
-	_ps2_key_counter = 0;
-	_ps2_key = 'Z';
-	_ps2_codelen = 0;
-	wait_queue_init(&_ps2_queue);
-}
+// static void init_ps2(void) {
+// 	_ps2_key_counter = 0;
+// 	_ps2_key = 'Z';
+// 	_ps2_codelen = 0;
+// 	wait_queue_init(&_ps2_queue);
+// }
 
-// Gets called by IRQ1 handler
-void post_ps2() {
-	// Wake up waiting threads
-	_ps2_key_counter++;
-	wait_wake_up_interruptible(&_ps2_queue);
-}
+// // Gets called by IRQ1 handler
+// void post_ps2(void) {
+// 	// Wake up waiting threads
+// 	_ps2_key_counter++;
+// 	wait_wake_up_interruptible(&_ps2_queue);
+// }
 
-int read_ps2() {
-	int key = _ps2_key_counter;
-	WAIT_EVENT_INTERRUPTIBLE(_ps2_queue, key != _ps2_key_counter);
-	return _ps2_key;
-}
+// static int read_ps2(void) {
+// 	int key = _ps2_key_counter;
+// 	WAIT_EVENT_INTERRUPTIBLE(_ps2_queue, key != _ps2_key_counter);
+// 	return _ps2_key;
+//}
 
-void kash_main() {
+static void kash_main(void) {
 	for(;;) {
-		int ch = read_ps2();
-		terminal_putchar(ch);
+		int ch = kb_getch();
+		console_putch((char)ch);
 	}
 	scheduler_exit(0);
 }
 
-void detect_boot_device() {
-	scheduler_sleep(5000);
-	printf("Finding boot media...\n");
-	scheduler_exit(0);
-}
+// static void detect_boot_device(void) {
+// 	scheduler_sleep(5000);
+// 	printf("Finding boot media...\n");
+// 	scheduler_exit(0);
+// }
 
-void kernel_idle() {
+static void kernel_idle(void) {
 	for(;;) {
 		scheduler_yield(); // Release control if possible
 		// TODO: Do idle work here, like indexing, caching, preallocating etc
@@ -93,24 +95,20 @@ void kernel_main(const char * cmdline) {
 	printf("\e[44;37;1mIKAROS v0.1\e[K\e[40;37m");
 	printf("Command Line: %s\n", cmdline);
 #endif
-	timer_init();
-	init_ps2();
+	acpi_init();
+	//init_ps2();
 
 	scheduler_initialize();
 	// Idle Thread must be present early on, as much driver code uses sleeping,
 	// and there must always be a active task
 	scheduler_create_thread("idle", kernel_idle);
-	scheduler_create_thread("kboot", detect_boot_device);
+	//scheduler_create_thread("kboot", detect_boot_device);
 	scheduler_create_thread("kash", kash_main);
-
+	console_debug();
 	pci_init();
 	invoke_initcall_bus();
 	
 	invoke_initcall_fs();
-	
-	ide_init();
-	// Initialize PCI IDE Controller
-	//pci_ide_init();
 	//bochs_vga_init();
 	invoke_initcall_devices();
 	

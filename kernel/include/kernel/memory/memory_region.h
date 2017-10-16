@@ -55,10 +55,10 @@ static inline int memory_region_overlap(memory_region_t* region, page_t min, pag
 static inline void memory_region_setbit(memory_region_t* region, page_t page, int set) {
 	uintptr_t element;
 	uintptr_t index;
-	while(region != 0 && page >= region->base + region->length) {
+	while(region != NULL && page >= region->base + region->length) {
 		region = region->next;
 	}
-	if(region != 0 && page >= region->base) {
+	if(region != NULL && page >= region->base) {
 		page   -= region->base;
 		element = page >> 3;
 		index   = 1 << (page - (element << 3));
@@ -75,10 +75,10 @@ static inline void memory_region_setbit(memory_region_t* region, page_t page, in
 static inline int memory_region_getbit(memory_region_t* region, page_t page) {
 	uintptr_t element;
 	uintptr_t index;
-	while(region != 0 && page >= region->base + region->length) {
+	while(region != NULL && page >= region->base + region->length) {
 		region = region->next;
 	}
-	if(region != 0 && page > region->base)
+	if(region != NULL && page > region->base)
 	{
 		page   -= region->base;
 		element = page >> 3;
@@ -96,7 +96,7 @@ static inline memory_region_t* memory_region_find_and_set(memory_region_t* regio
 	uint32_t i, n, x, y;
 	uint32_t* bitmap;
 
-	while(region != 0 && region != end) {
+	while(region != NULL && region != end) {
 		bitmap = (uint32_t*)region->bitmap;
 		n = region->length / 32;
 		for(i = 0; i < n; i++) {
@@ -110,19 +110,19 @@ static inline memory_region_t* memory_region_find_and_set(memory_region_t* regio
 		}
 		region = region->next;
 	}
-	return 0;
+	return NULL;
 }
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void             memory_region_acquire();
-void             memory_region_release();
+void             memory_region_acquire(void);
+void             memory_region_release(void);
 void             memory_region_early_init(uintptr_t base, uintptr_t length);
-void             memory_region_init();
+void             memory_region_init(void);
 void             memory_region_add(uintptr_t base, uintptr_t length);
-memory_region_t* memory_region_enumerate();
+memory_region_t* memory_region_enumerate(void);
 int              memory_region_alloc_page(page_t* page);
 void             memory_region_dealloc_page(page_t page);
 

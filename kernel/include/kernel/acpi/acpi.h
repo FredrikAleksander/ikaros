@@ -95,8 +95,9 @@ typedef struct acpi_table_mcfg acpi_table_mcfg_t;
 extern "C" {
 #endif
 
-void               acpi_init(rsdp_desc_t* rsdp);
-rsdp_desc_t*       acpi_get_rsdp();
+uintptr_t          acpi_virtual_base(void);
+void               acpi_init(void);
+rsdp_desc_t*       acpi_get_rsdp(void);
 
 #ifdef __cplusplus
 }

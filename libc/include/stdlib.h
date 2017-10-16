@@ -37,7 +37,8 @@ either expressed or implied, of the IKAROS Project.
 extern "C" {
 #endif
 
-void abort(void) __attribute__ ((noreturn));
+__attribute__ ((noreturn))
+void abort(void);
 
 int atoi(const char* str);
 

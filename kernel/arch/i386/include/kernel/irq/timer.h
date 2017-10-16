@@ -32,18 +32,17 @@ either expressed or implied, of the IKAROS Project.
 #include <kernel/irq/irq.h>
 #include <stdint.h>
 
+#define HZ 200
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void     timer_init();
-uint64_t timer_ticks();
-uint64_t timer_frequency();
-uint64_t timer_milliseconds();
-// Convert a "tick span" to milliseconds
-uint64_t timer_range_to_ms(uint64_t ticks_start, uint64_t ticks_end);
+extern unsigned long loops_per_jiffy;
+extern unsigned long volatile jiffies;
 
+void     timer_init(void);
+uint64_t timer_range_to_ms(uint64_t ticks_start, uint64_t ticks_end);
 
 #ifdef __cplusplus
 }

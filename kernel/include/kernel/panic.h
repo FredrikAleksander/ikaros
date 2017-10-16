@@ -43,4 +43,3 @@ void _panic(const char* __restrict fmt, ...);
 #define PANIC_ARGS(x, ...) _panic("KERNEL PANIC: " x, __VA_ARGS__)
 
 #endif
-

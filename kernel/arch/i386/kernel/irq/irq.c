@@ -29,12 +29,15 @@ either expressed or implied, of the IKAROS Project.
 #include <kernel/irq/irq.h>
 #include <kernel/irq/pic.h>
 #include <kernel/scheduler/scheduler.h>
+#include <kernel/drivers/debug/pc_serial_debug.h>
 #include <string.h>
 #include <stdio.h>
 
+static uint64_t idt[256];
+
 
 #define DEFIRQWRAPPER(irqnum)\
-void *irq##irqnum##handler(void)\
+static void *irq##irqnum##handler(void)\
 {\
 	volatile void *addr;\
 	asm goto("jmp %l[endofISR]" ::: "memory" : endofISR);\
@@ -65,7 +68,7 @@ void *irq##irqnum##handler(void)\
 }
 
 #define DEFINTWRAPPER(intnum)\
-void *int##intnum##handler(void)\
+static void *int##intnum##handler(void)\
 {\
 	volatile void *addr;\
 	asm goto("jmp %l[endofISR]" ::: "memory" : endofISR);\
@@ -96,7 +99,7 @@ void *int##intnum##handler(void)\
 }
 
 #define DEFINTWRAPPER_ERR(intnum)\
-void *int##intnum##handler(void)\
+static void *int##intnum##handler(void)\
 {\
 	volatile void *addr;\
 	asm goto("jmp %l[endofISR]" ::: "memory" : endofISR);\
@@ -145,15 +148,15 @@ typedef void* (*irqfunc_t)(void* ctx);
 typedef void* (*intfunc_t)(void* ctx);
 typedef void* (*intfunc_err_t)(void* ctx, uint32_t err);
 
-irqfunc_t     irqfuncs[16];
-intfunc_t     intfuncs[256];
-intfunc_err_t intfuncs_err[32];
+static irqfunc_t     irqfuncs[16];
+static intfunc_t     intfuncs[256];
+static intfunc_err_t intfuncs_err[32];
 
-void taskswitch(void __attribute__ ((unused))* stack)
+static void taskswitch(void __attribute__ ((unused))* stack)
 {
 }
 
-void irqfunc(uint32_t irqnum, void *ctx)
+static void irqfunc(uint32_t irqnum, void *ctx)
 {
 	void *stack = NULL;
 	if(irqnum != 7)
@@ -170,7 +173,7 @@ void irqfunc(uint32_t irqnum, void *ctx)
 	}
 }
 
-void intfunc(uint32_t intnum, void *ctx)
+static void intfunc(uint32_t intnum, void *ctx)
 {
 	void *stack = NULL;
 	if(intfuncs[intnum] != NULL)
@@ -179,7 +182,7 @@ void intfunc(uint32_t intnum, void *ctx)
 		taskswitch(stack);
 }
 
-void intfunc_err(uint32_t intnum, void *ctx, uint32_t errcode)
+static void intfunc_err(uint32_t intnum, void *ctx, uint32_t errcode)
 {
 	void *stack = NULL;
 	if(intfuncs_err[intnum] != NULL)
@@ -239,9 +242,11 @@ struct idt_desc
 {
     unsigned short limit;
     uintptr_t base;
-} __attribute__((packed)) idt_desc;
+} __attribute__((packed));
 
-static inline void idt_fill(uint64_t __attribute__((unused)) * _entry, uint16_t __attribute__((unused)) selector, void __attribute__((unused)) * offset, uint8_t __attribute__((unused)) type, uint8_t __attribute__((unused)) prv_level)
+static struct idt_desc idt_desc;
+
+static inline void idt_fill(uint64_t* _entry, uint16_t selector, void * offset, uint8_t __attribute__((unused)) type, uint8_t __attribute__((unused)) prv_level)
 {
 	struct idt_entry* entry = (struct idt_entry*)_entry;
 	entry->selector = selector;
@@ -260,73 +265,78 @@ static inline void idt_reload(struct idt_desc* idt_desc) {
 	);
 }
 
-void post_ps2();
+void post_ps2(void);
 
 void* timer_handler(void* ctx);
-void* keyboard_handler(void __attribute__ ((unused))* ctx) {
-	unsigned char __attribute__((unused)) scan_code[6];
-	int i = 0;
-	while((inb_p(0x64) & 1) == 1) {
-		scan_code[i] = inb_p(0x60);
-		i++;
-	}
-	post_ps2();
-	// printf("KB");
+extern void* keyboard_handler(void* ctx);
+static void* serial_handler(void __attribute__ ((unused)) * ctx) {
+	__pc_serial_debug_receive();
 	return NULL;
 }
-void* div0_handler(void __attribute__ ((unused))* ctx) {
+// static void* keyboard_handler(void __attribute__ ((unused))* ctx) {
+// 	unsigned char __attribute__((unused)) scan_code[6];
+// 	int i = 0;
+// 	while((inb_p(0x64) & 1) == 1) {
+// 		scan_code[i] = inb_p(0x60);
+// 		i++;
+// 	}
+// 	post_ps2();
+// 	// printf("KB");
+// 	return NULL;
+// }
+static void* div0_handler(void __attribute__ ((unused))* ctx) {
 	return NULL;
 }
-void* debug_handler(void __attribute__ ((unused))* ctx) {
+static void* debug_handler(void __attribute__ ((unused))* ctx) {
 	return NULL;
 }
-void* nmi_handler(void __attribute__ ((unused))* ctx) {
+static void* nmi_handler(void __attribute__ ((unused))* ctx) {
 	return NULL;
 }
-void* int3_handler(void __attribute__ ((unused))* ctx) {
+static void* int3_handler(void __attribute__ ((unused))* ctx) {
 	return NULL;
 }
-void* int4_handler(void __attribute__ ((unused))* ctx) {
+static void* int4_handler(void __attribute__ ((unused))* ctx) {
 	return NULL;
 }
-void* bounds_handler(void __attribute__ ((unused))* ctx) {
+static void* bounds_handler(void __attribute__ ((unused))* ctx) {
 	return NULL;
 }
-void* invalid_opcode_handler(void __attribute__ ((unused))* ctx) {
+static void* invalid_opcode_handler(void __attribute__ ((unused))* ctx) {
 	return NULL;
 }
-void* nofpu_handler(void __attribute__ ((unused))* ctx) {
+static void* nofpu_handler(void __attribute__ ((unused))* ctx) {
 	return NULL;
 }
-void* fpuseg_handler(void __attribute__ ((unused))* ctx) {
+static void* fpuseg_handler(void __attribute__ ((unused))* ctx) {
 	return NULL;
 }
-void* fpuerr_handler(void __attribute__ ((unused))* ctx) {
+static void* fpuerr_handler(void __attribute__ ((unused))* ctx) {
 	return NULL;
 }
-void* double_fault_handler(void __attribute__ ((unused))* ctx, uint32_t __attribute__ ((unused)) err) {
+static void* double_fault_handler(void __attribute__ ((unused))* ctx, uint32_t __attribute__ ((unused)) err) {
 	return NULL;
 }
-void* invalid_tss_handler(void __attribute__ ((unused))* ctx, uint32_t __attribute__ ((unused)) err) {
+static void* invalid_tss_handler(void __attribute__ ((unused))* ctx, uint32_t __attribute__ ((unused)) err) {
 	return NULL;
 }
-void* segnp_handler(void __attribute__ ((unused))* ctx, uint32_t __attribute__ ((unused)) err) {
+static void* segnp_handler(void __attribute__ ((unused))* ctx, uint32_t __attribute__ ((unused)) err) {
 	return NULL;
 }
-void* stackflt_handler(void __attribute__ ((unused))* ctx, uint32_t __attribute__ ((unused)) err) {
+static void* stackflt_handler(void __attribute__ ((unused))* ctx, uint32_t __attribute__ ((unused)) err) {
 	return NULL;
 }
-void* gpf_handler(void __attribute__ ((unused))* ctx, uint32_t __attribute__ ((unused)) err) {
+static void* gpf_handler(void __attribute__ ((unused))* ctx, uint32_t __attribute__ ((unused)) err) {
 	return NULL;
 }
-void* pauge_fault_handler(void __attribute__ ((unused))* ctx, uint32_t __attribute__ ((unused)) err) {
+static void* pauge_fault_handler(void __attribute__ ((unused))* ctx, uint32_t __attribute__ ((unused)) err) {
 	return NULL;
 }
-void* syscall_handler(void __attribute__ ((unused))* ctx) {
+static void* syscall_handler(void __attribute__ ((unused))* ctx) {
 	return NULL;
 }
 
-void irq_init() {
+void irq_init(void) {
 	memset(intfuncs, 0, sizeof(intfunc_t) * 256);
 	memset(irqfuncs, 0, sizeof(irqfunc_t) * 16);
 	memset(intfuncs_err, 0, sizeof(intfunc_err_t) * 32);
@@ -334,6 +344,7 @@ void irq_init() {
 
 	irqfuncs[0]  = timer_handler;
 	irqfuncs[1]  = keyboard_handler;
+	irqfuncs[4] = serial_handler;
 
 	intfuncs[0]  = div0_handler;
 	intfuncs[1]  = debug_handler;

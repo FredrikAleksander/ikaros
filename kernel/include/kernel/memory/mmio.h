@@ -26,8 +26,8 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
-#ifndef __KERNEL_MEMORY__PAGING_H
-#define __KERNEL_MEMORY__PAGING_H 1
+#ifndef __KERNEL_MEMORY__MMIO_H
+#define __KERNEL_MEMORY__MMIO_H 1
 
 #include <stdint.h>
 #include <stddef.h>
@@ -36,9 +36,8 @@ either expressed or implied, of the IKAROS Project.
 extern "C" {
 #endif
 
-void  mmio_init();
-void* mmio_map(void* phys_addr, size_t size);
-void  mmio_unmap(void* phys_addr, size_t size);
+extern void* mmio_map(void* phys_addr, size_t size);
+extern void  mmio_unmap(void* phys_addr, size_t size);
 
 #ifdef __cplusplus
 }

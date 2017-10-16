@@ -44,6 +44,7 @@ void* memmove(void*, const void*, size_t);
 void* memset(void*, int, size_t);
 size_t strlen(const char*);
 int strcmp(const char*, const char*);
+int strncmp(const char * s0, const char * s1, size_t max_len);
 
 #ifdef __cplusplus
 }

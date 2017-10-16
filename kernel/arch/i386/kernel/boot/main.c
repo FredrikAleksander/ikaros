@@ -28,11 +28,11 @@ either expressed or implied, of the IKAROS Project.
 */
 #include <kernel/acpi/acpi.h>
 #include <kernel/boot/multiboot2.h>
-#include <kernel/tty.h>
 #include <kernel/initcall.h>
 #include <kernel/memory/memory_map.h>
 #include <kernel/memory/memory_region.h>
 #include <kernel/memory/memory_manager.h>
+#include <kernel/memory/mmio.h>
 #include <kernel/panic.h>
 #include <kernel/scheduler/tss.h>
 #include <kernel/boot/gdt.h>
@@ -45,32 +45,27 @@ either expressed or implied, of the IKAROS Project.
 #include <stdlib.h>
 #include <kernel/scheduler/wait.h>
 #include <kernel/memory/paging.h>
+#include <kernel/kernel.h>
+#include <kernel/console/fbconsole.h>
+#include <kernel/drivers/console/vga_console.h>
+#include <kernel/input/keyboard.h>
 
 #define _TOSTRING(x) #x
 #define _TOSTRING_VALUE(x) _TOSTRING(x)
 
 #ifdef CONFIG_IKAROS_CMDLINE
-char* default_command_line = _TOSTRING_VALUE(CONFIG_IKAROS_COMMAND_LINE);
+static char* default_command_line = _TOSTRING_VALUE(CONFIG_IKAROS_COMMAND_LINE);
 #else
-char* default_command_line = "init=/bin/sh";
+static char* default_command_line = "init=/bin/sh";
 #endif
 
 void kernel_main(const char* command_line);
-
-static inline void vga_disable_cursor()
-{
-   outb(0x3D4, 0x0A); // LOW cursor shape port to vga INDEX register
-   outb(0x3D5, 0x3f); //bits 6-7 must be 0 , if bit 5 set the cursor is disable  , bits 0-4 controll the cursor shape .
-}
 
 struct multiboot_boot_header {
 	uint32_t total_size;
 	uint32_t reserved;
 	struct multiboot2_header_tag tags[0];
 };
-
-// extern long boot_pagedir;
-// extern long boot_pagetab1;
 
 extern uintptr_t kernel_heap_start;
 extern uintptr_t kernel_heap_end;
@@ -80,18 +75,28 @@ extern void*     kernel_malloc_freelist;
 extern uintptr_t _kernel_start;
 extern uintptr_t _kernel_end;
 
+extern struct multiboot2_tag_elf_sections*  elf_sections;
+
 struct multiboot2_tag_elf_sections*  elf_sections;
+
+extern void _init();
+extern void _fini();
+
+extern int __init_pc_serial_debug(void);
 
 // TODO: Clean up this horrible mess. Split function, replace all absolute constants etc. 
 // Also, alot of code here can be made portable with X86_64 with little effort, 
 // move this to shared x86 code
-void _multiboot2_main(struct multiboot_boot_header* info) {
+static void _multiboot2_main(struct multiboot_boot_header* info) {
 	char* cmdline = default_command_line;
 	struct multiboot2_header_tag*        tag = info->tags;
 	struct multiboot2_mmap_entry*        mmap;
-	struct multiboot2_tag_string*        cmdline_tag  = 0;
-	struct multiboot2_tag_basic_meminfo* mem_tag      = 0;
-	struct multiboot2_tag_mmap*          mmap_tag     = 0;
+	struct multiboot2_tag_string*        cmdline_tag  = NULL;
+	struct multiboot2_tag_basic_meminfo* mem_tag      = NULL;
+	struct multiboot2_tag_mmap*          mmap_tag     = NULL;
+	struct multiboot2_tag_framebuffer*   framebuffer  = NULL;
+	void* fb_virtual_address = NULL;
+	uintptr_t fb_size = 0;
 
 	uintptr_t kernel_start;
 	uintptr_t kernel_end;
@@ -105,11 +110,9 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 	size_t entry_size;
 	size_t num_entries;
 
-	elf_sections = 0;
+	elf_sections = NULL;
 	kernel_start = (uintptr_t)&_kernel_start;
 	kernel_end   = (uintptr_t)&_kernel_end;
-
-	vga_disable_cursor();
 
 	while((offset = (uintptr_t)tag) < tags_end) {
 		switch(tag->type) {
@@ -126,6 +129,9 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 			case MULTIBOOT2_TAG_TYPE_ELF_SECTIONS:
 				elf_sections = (struct multiboot2_tag_elf_sections*)tag;
 				break;
+			case MULTIBOOT2_TAG_TYPE_FRAMEBUFFER:
+				framebuffer = (struct multiboot2_tag_framebuffer*)tag;
+				break;
 			default:
 				break;
 		}
@@ -135,12 +141,12 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 		}
 		tag = (struct multiboot2_header_tag*)offset;
 	}
-	if(mem_tag == 0) {
-		printf("Missing basic memory info\n");
+
+	// TODO: Check if we booted via EFI, if so, use framebuffer console
+	if(mem_tag == NULL) {
 		return;
 	}
-	if(mmap_tag == 0) {
-		printf("Missing memory map\n");
+	if(mmap_tag == NULL) {
 		return;
 	}
 
@@ -176,7 +182,7 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 
 	memory_region_acquire();
 	region = memory_region_enumerate();
-	while(region != 0) {
+	while(region != NULL) {
 		if(memory_region_overlap(region, min_size, max_size)) {
 			// Mark used bits
 			if(region->base > min_size) {
@@ -199,16 +205,77 @@ void _multiboot2_main(struct multiboot_boot_header* info) {
 	}
 	memory_region_release();
 
+	_init();
+
 	invoke_initcall_early();
 	memory_region_init();
+	__init_pc_serial_debug();
 	invoke_initcall_arch();
 
+	//asm volatile("hlt");
+
+	if(framebuffer) {
+		fb_size = framebuffer->common.framebuffer_pitch *
+			framebuffer->common.framebuffer_height *
+			(framebuffer->common.framebuffer_bpp >> 3);
+		fb_virtual_address = mmio_map(((void*)(uintptr_t)framebuffer->common.framebuffer_addr), fb_size);
+
+		if(framebuffer->common.framebuffer_type == 2) {
+			// Text Mode
+			__init_vga_console(fb_virtual_address,
+			framebuffer->common.framebuffer_width,
+			framebuffer->common.framebuffer_height);
+		}
+		else {
+			console_framebuffer_t* fb;
+			size_t size = sizeof(console_framebuffer_t);
+			if(framebuffer->common.framebuffer_type == 0) {
+				size += framebuffer->framebuffer_palette_num_colors * sizeof(struct multiboot2_color);
+			}
+			fb = malloc(size);
+			memset(fb, 0, sizeof(console_framebuffer_t));
+			
+			fb->width  = framebuffer->common.framebuffer_width;
+			fb->height = framebuffer->common.framebuffer_height;
+			fb->pitch  = framebuffer->common.framebuffer_pitch ? framebuffer->common.framebuffer_pitch : framebuffer->common.framebuffer_height;
+			fb->bpp    = framebuffer->common.framebuffer_bpp;
+			fb->data   = fb_virtual_address;
+			uint8_t bpp_padded = fb->bpp;
+			if(bpp_padded % 8 != 0) {
+				bpp_padded += 8 - (bpp_padded % 8);
+			}
+			bpp_padded <<= 3;
+			fb->private = malloc(bpp_padded * 256);
+			memset(fb->private, 0, bpp_padded * 256);
+
+			if(framebuffer->common.type == 0) {
+				memcpy(fb->palette, framebuffer->framebuffer_palette,
+					framebuffer->framebuffer_palette_num_colors * sizeof(struct multiboot2_color));
+			}
+			else {
+				fb->flags |= FB_CONSOLE_FLAG_RGB;
+				fb->format.red_mask_size   = framebuffer->framebuffer_red_mask_size;
+				fb->format.red_position    = framebuffer->framebuffer_red_field_position;
+				fb->format.green_mask_size = framebuffer->framebuffer_green_mask_size;
+				fb->format.green_position  = framebuffer->framebuffer_green_field_position;
+				fb->format.blue_mask_size  = framebuffer->framebuffer_blue_mask_size;
+				fb->format.blue_position   = framebuffer->framebuffer_blue_field_position;
+			}
+			__init_fb_console(fb);
+		}
+	}
+	else {
+		__init_null_console();
+	}
+	
 	kernel_main(cmdline);
+
+	_fini();
 }
 
-void _main(void* mbd, unsigned int magic) {
-	terminal_initialize();
+extern void _main(void* mbd, unsigned int magic);
 
+void _main(void* mbd, unsigned int magic) {
 	if(magic == 0x36D76289) {
 		_multiboot2_main((struct multiboot_boot_header*)mbd);
 	}

@@ -31,6 +31,6 @@ either expressed or implied, of the IKAROS Project.
 
 #include <stdint.h>
 
-typedef uint32_t keycode_t;
+typedef uint16_t keycode_t;
 
 #endif

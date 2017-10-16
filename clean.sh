@@ -8,4 +8,6 @@ done
 
 rm -rf sysroot
 rm -rf isodir
+rm -Rf efidir
 rm -rf ikaros.iso
+rm -f grub.tmp.cfg

@@ -35,19 +35,17 @@ either expressed or implied, of the IKAROS Project.
 extern "C" {
 #endif
 
-uint64_t idt[256];
-
-void irq_init();
+void irq_init(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-static inline void irq_enable() {
+static inline void irq_enable(void) {
 	asm volatile("sti");
 }
 
-static inline void irq_disable() {
+static inline void irq_disable(void) {
 	asm volatile("cli");
 }
 

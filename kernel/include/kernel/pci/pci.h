@@ -153,7 +153,7 @@ static inline void pci_set_bar5(uint8_t bus, uint8_t slot, uint8_t func, uint32_
 extern "C" {
 #endif
 
-void            pci_init();
+void            pci_init(void);
 pci_device_t*   pci_enumerate_devices(pci_device_t* current);
 pci_function_t* pci_enumerate_functions(pci_device_t* device, pci_function_t* current);
 

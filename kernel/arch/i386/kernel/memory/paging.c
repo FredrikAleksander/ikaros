@@ -34,6 +34,7 @@ either expressed or implied, of the IKAROS Project.
 #include <kernel/panic.h>
 #include <sys/elf32.h>
 #include <stdio.h>
+#include <string.h>
 
 #define PAGE_SIZE  4096
 #define PAGE_SHIFT 12
@@ -43,9 +44,9 @@ extern long boot_pagetab1;
 extern uintptr_t _kernel_start;
 extern uintptr_t _kernel_end;
 
-struct multiboot2_tag_elf_sections* elf_sections;
+extern struct multiboot2_tag_elf_sections* elf_sections;
 
-static inline void paging_init_kernel_space() {
+static inline void paging_init_kernel_space(void) {
 	uintptr_t entry;
 	uintptr_t  page;
 	uintptr_t  start;
@@ -64,7 +65,7 @@ static inline void paging_init_kernel_space() {
 			}
 			*((volatile uintptr_t*)offset) = (page << PAGE_SHIFT) | 0x03;
 			
-			mm_invlpg(0xFFC00000 + start * 4096);
+			mm_invlpg((void*)(0xFFC00000 + start * 4096));
 			memset((uintptr_t*)(0xFFC00000 + start * 4096), 0, 4096);
 
 			count++;
@@ -72,7 +73,7 @@ static inline void paging_init_kernel_space() {
 	}	
 }
 
-static int paging_earlyinit() {
+static int paging_earlyinit(void) {
 	elf32_shdr_t* shdr;
 	uintptr_t offset;
 	uintptr_t i, j;
@@ -113,13 +114,13 @@ static int paging_earlyinit() {
 	*((volatile uintptr_t*)offset) = ((pagetb1 - 0xC0000000) & 0xFFFFF000) | 0x03;
 
 	// Flush changes
-	mm_invlpg(pagedir);
-	mm_invlpg(pagetb1);
-	mm_invlpg(0xFFFFF000);
-	mm_invlpg(0xFFFFE000);
+	mm_invlpg((void*)pagedir);
+	mm_invlpg((void*)pagetb1);
+	mm_invlpg((void*)0xFFFFF000);
+	mm_invlpg((void*)0xFFFFE000);
 
-	memset(0xFFFFE000, 0, 4096);
-	memset(0xFFFFF000, 0, 4096);
+	memset((void*)0xFFFFE000, 0, 4096);
+	memset((void*)0xFFFFF000, 0, 4096);
 
 	// Point last entry of page directory to the page directory itself
 	offset = 0xFFFFF000 + (4 * 1023);
@@ -170,7 +171,7 @@ static int paging_earlyinit() {
 	// get updated everywhere
 
 	// Reload CR3 with new page directory
-	mm_load_cr3(pagedir_page << PAGE_SHIFT);
+	mm_load_cr3((void*)(pagedir_page << PAGE_SHIFT));
 
 	paging_init_kernel_space();
 

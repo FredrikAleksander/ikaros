@@ -33,38 +33,38 @@ either expressed or implied, of the IKAROS Project.
 #include <sys/spinlock.h>
 #include <stdlib.h>
 
-task_t* tasks;
-task_t* tasks_tail;
+static task_t* tasks;
+static task_t* tasks_tail;
 
 task_t* running_task;
 
-wait_queue_head_t timer_queue;
+static wait_queue_head_t timer_queue;
 
-void scheduler_initialize() {
+void scheduler_initialize(void) {
 	wait_queue_init(&timer_queue);
 
-	tasks = task_wrap("kernel");
+	tasks = task_wrap();
 	tasks_tail = tasks;
 	tasks->next = tasks;
 	running_task = tasks;
 }
 
-task_t* scheduler_timer() {
+task_t* scheduler_timer(void) {
 	wait_wake_up_interruptible(&timer_queue);
 	return NULL;
 }
 
-task_t* scheduler_next_running_task(task_t* task) {
+static task_t* scheduler_next_running_task(task_t* task) {
 	task_t* curr = task->next;
 
-	while(curr != 0 && curr->state != TASK_RUNNING && curr != task) {
+	while(curr != NULL && curr->state != TASK_RUNNING && curr != task) {
 		curr = curr->next;
 	}
 
 	return curr;
 }
 
-void scheduler_yield() {
+void scheduler_yield(void) {
 	task_t* next;
 	registers_t* from;
 
@@ -79,8 +79,8 @@ void scheduler_yield() {
 }
 
 void scheduler_sleep(uint64_t ms) {
-	uint64_t sleep_start = timer_ticks();
-	WAIT_EVENT_INTERRUPTIBLE(timer_queue, timer_range_to_ms(sleep_start, timer_ticks()) >= ms);
+	uint64_t sleep_start = jiffies;
+	WAIT_EVENT_INTERRUPTIBLE(timer_queue, timer_range_to_ms(sleep_start, jiffies) >= ms);
 }
 
 static inline void tasks_insert(task_t* task) {
@@ -140,7 +140,7 @@ void scheduler_exit(int __attribute__ ((unused)) exit_code) {
 	task_t* from;
 	task_t* next;
 
-	if(running_task->next == 0 || running_task->next == running_task) {
+	if(running_task->next == NULL || running_task->next == running_task) {
 		// TODO: Shutdown system
 		PANIC("SHUTDOWN");
 	}

@@ -29,35 +29,38 @@ either expressed or implied, of the IKAROS Project.
 #include <kernel/irq/timer.h>
 #include <kernel/scheduler/scheduler.h>
 #include <stddef.h>
+#include <stdio.h>
 
-static uint64_t        timer_freq;
-static uint64_t        timer_ticks_freq; // Numbe of ticks at timer_freq
+unsigned long loops_per_jiffy;
+unsigned long volatile jiffies;
 
-void timer_init() {
-	timer_freq = 18;
-	timer_ticks_freq = 0;
+void timer_init(void) {
+	jiffies = 0;
+	loops_per_jiffy = 0;
+	asm volatile("mov $0x36, %al\n out %al, $0x43\n mov $5965, %ax\nout %al, $0x40\nmov %ah, %al\nout %al, $0x40");
 }
 
 static inline uint64_t ticks_to_ms(uint64_t ticks) {
-	return (ticks * 1000) / timer_freq;
+	return (ticks * 1000) / HZ;
 }
 
-uint64_t timer_ticks() {
-	return timer_ticks_freq;
-}
-uint64_t timer_frequency() {
-	return timer_freq;
-}
-uint64_t timer_milliseconds() {
-	return ticks_to_ms(timer_ticks_freq);
-}
-uint64_t timer_range_to_ms(uint64_t __attribute__((unused)) ticks_start, uint64_t __attribute__((unused)) ticks_end) {
+uint64_t timer_range_to_ms(uint64_t ticks_start, uint64_t ticks_end) {
 	return ticks_to_ms(ticks_end - ticks_start);
 }
 
+// Consider going for a tickless system. Instead of timer ticks
+// happing all the time, use one-shot mode. For preemption, 
+// a one-shot timer interrupt can be setup on task switch, to make
+// the task sleep when it's time is up. Obviously this requires
+// extra thought in order to get both task and I/O scheduling working
+// just right. Programs could also be allowed to ask for extending its
+// execution time. Useful for games and high-performance real-time applications,
+// as it allows the program to maximize the performance of the system
+extern void* timer_handler(void* ctx);
 void* timer_handler(void __attribute__ ((unused)) * ctx) {
 	task_t* next;
-	timer_ticks_freq++;
+	jiffies+=1;
+	
 	next = scheduler_timer();
 	if(next != NULL) {
 	}

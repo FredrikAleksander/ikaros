@@ -27,26 +27,24 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
 #include <kernel/acpi/acpi.h>
+#include <kernel/initcall.h>
 #include <string.h>
 
-int rsdp_searched;
-rsdp_desc_t* rsdp_desc;
+#define ACPI_VIRTUAL_BASE 0xC0000000
 
-void acpi_init(rsdp_desc_t* rsdp) {
-	rsdp_searched = rsdp == 0 ? 0 : 1;
-	rsdp_desc = rsdp;
-}
+static int rsdp_searched;
+static rsdp_desc_t* rsdp_desc;
 
-rsdp_desc_t* acpi_get_rsdp() {
+extern void acpi_early_init(void);
+
+void acpi_early_init(void) {
+	rsdp_searched = 0;
+	rsdp_desc = NULL;
 	rsdp_desc_t* rsdp;
-	uintptr_t virtual_base = 0xC0000000;
 
+	uintptr_t virtual_base = ACPI_VIRTUAL_BASE;
 	uintptr_t offset = 0x000E0000;
 	uintptr_t range  = 0x000FFFFF;
-	
-	if(rsdp_searched) {
-		return rsdp_desc;
-	}
 
 	rsdp_searched = 1;
 
@@ -55,10 +53,16 @@ rsdp_desc_t* acpi_get_rsdp() {
 		rsdp = (rsdp_desc_t*)(offset + virtual_base);
 		if(memcmp(rsdp->signature, "RSD PTR ", 8) == 0) {
 			rsdp_desc = rsdp;
-			return rsdp_desc;
+			break;
 		}
-
 		offset += 16;
 	}
+}
+
+uintptr_t acpi_virtual_base(void) {
+	return ACPI_VIRTUAL_BASE;
+}
+
+rsdp_desc_t* acpi_get_rsdp(void) {
 	return rsdp_desc;
 }

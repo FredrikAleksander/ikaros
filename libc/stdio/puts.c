@@ -27,7 +27,18 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the IKAROS Project.                            
 */
 #include <stdio.h>
+#include <string.h>
+
+#if defined(__is_libk)
+#include <kernel/console/console.h>
+#endif
 
 int puts(const char* string) {
-	return printf("%s\n", string);
+#if defined(__is_libk)
+	size_t len = strlen(string);
+	console_write(string, len);
+#else
+	// TODO: Implement stdio and the write system call.
+#endif
+	return len;
 }

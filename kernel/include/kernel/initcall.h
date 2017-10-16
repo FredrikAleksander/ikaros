@@ -47,11 +47,11 @@ typedef int (*initcall_t)();
 extern "C" {
 #endif
 
-void __invoke_initcall0();
-void __invoke_initcall1();
-void __invoke_initcall2();
-void __invoke_initcall3();
-void __invoke_initcall4();
+void __invoke_initcall0(void);
+void __invoke_initcall1(void);
+void __invoke_initcall2(void);
+void __invoke_initcall3(void);
+void __invoke_initcall4(void);
 
 #ifdef __cplusplus
 }
@@ -59,19 +59,19 @@ void __invoke_initcall4();
 
 
 
-static inline void invoke_initcall_early() {
+static inline void invoke_initcall_early(void) {
 	__invoke_initcall0();
 }
-static inline void invoke_initcall_arch() {
+static inline void invoke_initcall_arch(void) {
 	__invoke_initcall1();
 }
-static inline void invoke_initcall_bus() {
+static inline void invoke_initcall_bus(void) {
 	__invoke_initcall2();
 }
-static inline void invoke_initcall_fs() {
+static inline void invoke_initcall_fs(void) {
 	__invoke_initcall3();
 }
-static inline void invoke_initcall_devices() {
+static inline void invoke_initcall_devices(void) {
 	__invoke_initcall4();
 }
 

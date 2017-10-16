@@ -29,19 +29,21 @@ either expressed or implied, of the IKAROS Project.
 #ifndef __LIBC__STDDEF_H
 #define __LIBC__STDDEF_H 1
 
-#define NULL 0
+#define NULL ((void*)0)
 #define offsetof(st, m) ((size_t)&(((st *)0)->m))
-
-#if defined(__i386__)
-typedef signed long   ptrdiff_t;
-typedef signed long   ssize_t;
-typedef unsigned long size_t;
-#endif
 
 #if defined(__x86_64__)
 typedef signed long long   ptrdiff_t;
 typedef signed long long   ssize_t;
 typedef unsigned long long size_t;
+#elif defined(__i386__)
+typedef signed int   ptrdiff_t;
+typedef signed int   ssize_t;
+typedef unsigned int  size_t;
+#else
+typedef signed long   ptrdiff_t;
+typedef signed long   ssize_t;
+typedef unsigned long size_t;
 #endif
 
 #endif

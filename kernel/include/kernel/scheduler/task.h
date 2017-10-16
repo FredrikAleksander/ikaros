@@ -45,13 +45,13 @@ typedef struct task {
 	task_state_t state;
 } task_t;
 
-typedef void (*task_entry_point)();
+typedef void (*task_entry_point)(void);
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-task_t* task_wrap(); // Wrap current thread in a task, only used during early init
+task_t* task_wrap(void); // Wrap current thread in a task, only used during early init
 task_t* task_inherit(const char* name, task_entry_point entry_point, void* stack);
 void    task_set_state(task_t* task, task_state_t state);
 task_t* task_create(const char* name, task_entry_point entry_point, uint32_t eflags, void* page_dir, void* stack);

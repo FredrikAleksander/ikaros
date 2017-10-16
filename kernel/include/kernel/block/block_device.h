@@ -29,26 +29,60 @@ either expressed or implied, of the IKAROS Project.
 #ifndef __KERNEL_BLOCK__BLOCK_DEVICE_H
 #define __KERNEL_BLOCK__BLOCK_DEVICE_H 1
 
+#include <kernel/compiler.h>
+#include <kernel/device.h>
+#include <kernel/types.h>
+#include <kernel/scheduler/wait.h>
 #include <stdint.h>
+#include <stddef.h>
 
-typedef struct block_device_ops {
+#define BLOCK_ACCESS_READ  0
+#define BLOCK_ACCESS_WRITE 1
 
-} block_device_ops_t;
+struct block_device;
+struct bio_buffer_info;
+struct bio_request;
+struct bio_request_queue;
 
-typedef struct block_device {
-	struct block_device* prev;
-	struct block_device* next;
+typedef struct block_device      block_device_t;
+typedef struct bio_buffer_info   bio_buffer_info_t;
+typedef struct bio_request       bio_request_t;
+typedef struct bio_request_queue bio_request_queue_t;
 
-	uint32_t block_size;
-	uint64_t block_count;
-} block_device_t;
+typedef int (*bio_request_fn_t)(bio_buffer_info_t* buffer);
+typedef void (*bio_complete_fn_t)(bio_buffer_info_t *buffer, int status);
+
+struct bio_buffer_info {
+	uint32_t ref_count;
+	uint64_t block;
+	size_t   size;
+	uint8_t* data;	
+	uint32_t status;
+	bio_complete_fn_t complete_fn;
+	void*             complete_data;
+};
+
+struct bio_request_queue {
+	union {
+		bio_request_fn_t     request_fn;
+		bio_request_queue_t* freelist_next;
+	};
+	bio_request_t*    request_head;
+	spinlock_t        request_list_lock;
+
+	wait_queue_head_t wait_queue;
+};
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void block_init();
-void block_add_device(block_device_t* dev);
+int                  bio_buffer_stale(bio_buffer_info_t* buffer);
+bio_buffer_info_t*   bio_get_buffer(device_t bio_dev, loff_t block, ssize_t blocksize);
+void                 bio_block_access(int access_type, uint32_t flags, bio_buffer_info_t* buffers, size_t buffers_len);
+void                 bio_wait_for_buffer(bio_buffer_info_t* buffer);
+bio_request_queue_t* bio_create_request_queue(void);
+int                  bio_release_request_queue(bio_request_queue_t* queue);
 
 #ifdef __cplusplus
 }

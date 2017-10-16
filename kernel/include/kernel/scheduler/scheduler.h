@@ -36,31 +36,31 @@ either expressed or implied, of the IKAROS Project.
 extern "C" {
 #endif
 
-task_t* running_task;
+extern task_t* running_task;
 
-void    scheduler_initialize();
+void    scheduler_initialize(void);
 void    scheduler_create_thread(const char* name, task_entry_point entry_point);
-void    scheduler_enable_preemption();
-void    scheduler_disable_preemption();
+void    scheduler_enable_preemption(void);
+void    scheduler_disable_preemption(void);
 // Called by IRQ subsystem. If return value is not NULL,
 // the IRQ subsystem should make a context switch to the specified
 // task on interrupt return
-task_t* scheduler_timer();
+task_t* scheduler_timer(void);
 void    scheduler_sleep(uint64_t ms);
-void    scheduler_yield();
+void    scheduler_yield(void);
 void    scheduler_exit(int exit_code);
 
 #ifdef __cplusplus
 }
 #endif
 
-static inline void spinlock_acquire_irqsave(spinlock_t __attribute__((unused)) * p, unsigned long __attribute__((unused)) *flags) {
+static inline void spinlock_acquire_irqsave(spinlock_t * p, unsigned long *flags) {
 	irq_save_local(flags);
 	irq_disable();
 	spinlock_acquire(p);
 }
 
-static inline void spinlock_release_irqload(spinlock_t __attribute__((unused)) * p, unsigned long __attribute__((unused)) *flags) {
+static inline void spinlock_release_irqload(spinlock_t * p, unsigned long *flags) {
 	spinlock_release(p);
 	irq_load_local(flags);
 }
