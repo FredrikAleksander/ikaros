@@ -54,8 +54,8 @@ multiboot_header:
 	.short 5
 	.short 0
 	.long 20
-	.long 0 
-	.long 0 
+	.long 1600
+	.long 1200
 	.long 32
 
 	/* Termination Tag */

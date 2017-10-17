@@ -140,7 +140,7 @@ static int init_x86(void) {
 	outb(PIC1_DATA, 0xFC);
 	outb(PIC2_DATA, 0xFF);
 
-	asm volatile( "sti" );
+	// asm volatile( "sti" );
 
 	return INIT_OK;
 }

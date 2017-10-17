@@ -263,6 +263,8 @@ static void _multiboot2_main(struct multiboot_boot_header* info) {
 		__init_null_console();
 	}
 	
+	asm volatile( "sti" );
+
 	kernel_main(cmdline);
 }
 

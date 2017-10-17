@@ -44,11 +44,12 @@ typedef struct ps2_keyboard {
 
 	uint8_t    scancode_buffer[MAX_SCANCODE_SEQUENCE];
 	uint8_t    scancode_index;
+	uint8_t    scancode_set;
 } ps2_keyboard_t;
 
 static ps2_keyboard_t* keyboards;
 
-static uint8_t basemap[] = {
+const uint8_t basemap_at2[] = {
 	0, // 0x00 ?
 	67, // 0x01 F9
 	0, // 0x02 ?
@@ -306,8 +307,7 @@ static uint8_t basemap[] = {
 	0, // 0xFE
 	0  // 0xFF
 };
-
-static uint8_t exmap[] = {
+const uint8_t exmap_at2[] = {
 	0, // 0x00 
 	0, // 0x01 
 	0, // 0x02 
@@ -566,34 +566,33 @@ static uint8_t exmap[] = {
 	0  // 0xFF
 };
 
-static inline keycode_t kb_map_scancode(uint8_t scancode[]) {
+const keycode_t exmap_at1[256] = {
+};
+
+static inline keycode_t kb_map_scancode_at2(uint8_t scancode[]) {
 	if(scancode[0] == 0xE1) {
 	}
 	else if(scancode[0] == 0xE0) {
 		if(scancode[1] == 0xF0) {
 			// Released
-			return ((keycode_t)exmap[scancode[2]]) | (1 << 8);
+			return ((keycode_t)exmap_at2[scancode[2]]) | (1 << 8);
 		}
 		else {
 			// Pressed
-			return exmap[scancode[1]];
+			return exmap_at2[scancode[1]];
 		}
 	}
 	else if(scancode[0] == 0xF0) {
-		keycode_t k = basemap[scancode[1]];
-		//printf("(0x%04X, ", (unsigned)k);
-		k |= 1 << 8;
-		//printf("0x%04X)", (unsigned)k);
+		keycode_t k = basemap_at2[scancode[1]] | (1 << 8);
 		return k;
 	}
 	else {
-		return ((keycode_t)basemap[scancode[0]]); // Pressed
+		return ((keycode_t)basemap_at2[scancode[0]]); // Pressed
 	}
 
 	return 0;
 }
-
-static inline int kb_scancode_sequence_complete(uint8_t scancode[], uint8_t scancode_len) {
+static inline int kb_scancode_sequence_complete_at2(uint8_t scancode[], uint8_t scancode_len) {
 	if(scancode[0] == 0xE1) {
 		return scancode_len == 8 
 			? 1 
@@ -625,15 +624,61 @@ static inline int kb_scancode_sequence_complete(uint8_t scancode[], uint8_t scan
 	return 0;
 }
 
+static inline keycode_t kb_map_scancode_at1(uint8_t scancode[]) {
+	if(scancode[0] == 0xE1) {
+		// Pause
+		return 119;
+	}
+	if(scancode[0] == 0xE0) {
+		if(scancode[1] == 0x2A) {
+			return 99;
+		}
+		if(scancode[1] == 0xB7) {
+			return 99 | (1 << 8);
+		}
+		return exmap_at1[scancode[1]];
+	}
+	if(scancode[0] > 128) {
+		return (scancode[0] - 128) | (1 << 8);
+	}
+
+	return scancode[0];
+}
+
+static inline int kb_scancode_sequence_complete_at1(uint8_t scancode[], uint8_t scancode_len) {
+	if(scancode[0] == 0xE1) {
+		return scancode_len == 6 ? 1 : 0;
+	}
+	if(scancode[0] == 0xE0) {
+		if(scancode_len > 1) {
+			if(scancode[1] == 0x2A || scancode[1] == 0xB7) {
+				return scancode_len == 4 ? 1 : 0;
+			}
+			return scancode_len == 2 ? 1 : 0;
+		}
+	}
+	return scancode_len == 1 ? 1 : 0;
+}
+
 static inline void kb_add_scancode_seq(ps2_keyboard_t* kb, uint8_t scancode) {
 	keycode_t kc;
 	kb->scancode_buffer[kb->scancode_index] = scancode;
 	kb->scancode_index++;
-	if(kb_scancode_sequence_complete(kb->scancode_buffer, kb->scancode_index)) {
-		kc = kb_map_scancode(kb->scancode_buffer);
-		__kb_emit_keycode(kc);
-		kb->scancode_index = 0;
+	if(kb->scancode_set == 0) {
+		if(kb_scancode_sequence_complete_at1(kb->scancode_buffer, kb->scancode_index)) {
+			kc = kb_map_scancode_at1(kb->scancode_buffer);
+			__kb_emit_keycode(kc);
+			kb->scancode_index = 0;
+		}
 	}
+	else if(kb->scancode_set == 1) {
+		if(kb_scancode_sequence_complete_at2(kb->scancode_buffer, kb->scancode_index)) {
+			kc = kb_map_scancode_at2(kb->scancode_buffer);
+			__kb_emit_keycode(kc);
+			kb->scancode_index = 0;
+		}
+	}
+	
 }
 
 extern void* keyboard_handler(void* ctx);
@@ -648,20 +693,20 @@ void* keyboard_handler(void __attribute__ ((unused))* ctx) {
 static void init_ps2_keyboard(ps2_keyboard_t* kb) {
 	// TODO: Do this properly, this is such a hack
 	memset(kb, 0, sizeof(ps2_keyboard_t));
-	uint8_t config = 0;
+	// uint8_t config = 0;
 
-	while((inb_p(0x64) & 1) == 1) {
-		inb_p(0x60);
-	}
-	outb_p(0x64, 0x20);
-	while((inb_p(0x64) & 1) == 0);
-	config = inb_p(0x60);
-	if(((config >> 6) & 1) == 1)
-	{
-		config = config & ~(1<<6);
-		outb_p(0x64, 0x60);
-		outb_p(0x60, config);
-	}
+	// while((inb_p(0x64) & 1) == 1) {
+	// 	inb_p(0x60);
+	// }
+	// outb_p(0x64, 0x20);
+	// while((inb_p(0x64) & 1) == 0);
+	// config = inb_p(0x60);
+	// if(((config >> 6) & 1) == 1)
+	// {
+	// 	config = config & ~(1<<6);
+	// 	outb_p(0x64, 0x60);
+	// 	outb_p(0x60, config);
+	// }
 }
 
 static int init_at_keyboard(void) {
@@ -670,4 +715,5 @@ static int init_at_keyboard(void) {
 	return INIT_OK;
 }
 
-devices_initcall(init_at_keyboard);
+arch_initcall(init_at_keyboard);
+

@@ -42,31 +42,6 @@ either expressed or implied, of the IKAROS Project.
 #include <kernel/console/console.h>
 #include <sys/unicode.h>
 
-// static int               _ps2_key_counter;
-// static int               _ps2_key;
-// static wait_queue_head_t _ps2_queue;
-// //static char              _ps2_buffer[16];
-// static int               _ps2_codelen;
-
-// static void init_ps2(void) {
-// 	_ps2_key_counter = 0;
-// 	_ps2_key = 'Z';
-// 	_ps2_codelen = 0;
-// 	wait_queue_init(&_ps2_queue);
-// }
-
-// // Gets called by IRQ1 handler
-// void post_ps2(void) {
-// 	// Wake up waiting threads
-// 	_ps2_key_counter++;
-// 	wait_wake_up_interruptible(&_ps2_queue);
-// }
-
-// static int read_ps2(void) {
-// 	int key = _ps2_key_counter;
-// 	WAIT_EVENT_INTERRUPTIBLE(_ps2_queue, key != _ps2_key_counter);
-// 	return _ps2_key;
-//}
 
 static void kash_main(void) {
 	for(;;) {
@@ -75,12 +50,6 @@ static void kash_main(void) {
 	}
 	scheduler_exit(0);
 }
-
-// static void detect_boot_device(void) {
-// 	scheduler_sleep(5000);
-// 	printf("Finding boot media...\n");
-// 	scheduler_exit(0);
-// }
 
 static void kernel_idle(void) {
 	for(;;) {
@@ -102,15 +71,14 @@ void kernel_main(const char * cmdline) {
 	// Idle Thread must be present early on, as much driver code uses sleeping,
 	// and there must always be a active task
 	scheduler_create_thread("idle", kernel_idle);
-	//scheduler_create_thread("kboot", detect_boot_device);
-	scheduler_create_thread("kash", kash_main);
+	
 	console_debug();
 	pci_init();
 	invoke_initcall_bus();
-	
 	invoke_initcall_fs();
-	//bochs_vga_init();
 	invoke_initcall_devices();
 	
+	scheduler_create_thread("kash", kash_main);
+
 	scheduler_exit(0);
 }

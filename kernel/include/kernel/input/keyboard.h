@@ -37,6 +37,7 @@ either expressed or implied, of the IKAROS Project.
 #define KEY_MODIFIER_CTRL   2
 #define KEY_MODIFIER_ALT    4
 #define KEY_MODIFIER_ALT_GR 8
+#define KEY_MODIFIER_CAPS   16
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,9 +45,7 @@ extern "C" {
 
 extern uint8_t   kb_getmods(void);
 extern keycode_t kb_getkey(void);
-extern char16_t  kb_getch(void);
-extern int       kb_register_keymap(const char* name, char16_t** keymap, int deflt);
-extern int       kb_use_keymap(const char* name);
+extern char      kb_getch(void);
 
 extern void      __kb_emit_keycode(keycode_t keycode);
 
